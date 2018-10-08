@@ -21,6 +21,8 @@ module Node{
     uses interface SimpleSend as Sender;
     uses interface CommandHandler;
     uses interface List<pack> as PackList;     //Create list of pack called PackList
+    uses interface List<uint16_t> as NeighborsList; //Create list of neighbors
+    uses interface Timer<TMilli> as periodTimer; //Creates implementation of timer for neighbor periods
 }
 
 implementation{
@@ -29,13 +31,24 @@ implementation{
     pack sendPackage;
     // Prototypes
 
+    void discoverNeighbors();
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
     bool findPack(pack *Package);           //Function to find packs (Implementation at the end)
     void pushPack(pack Package);            //Function to push packs (Implementation at the end)
 
+    event void periodTimer.fired(){
+      //ping(TOS_NODE_ID, "NEIGHBOR SEARCH");
+       discoverNeighbors();
+       //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+       CommandHandler.printNeighbors;
+       //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+
+   }
+
     event void Boot.booted(){
     call AMControl.start();
+    call periodTimer.startPeriodic(5000);
 
     dbg(GENERAL_CHANNEL, "Booted\n");
 }
@@ -51,7 +64,7 @@ event void AMControl.startDone(error_t err){
 
 event void AMControl.stopDone(error_t err){}
 
-    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
+event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
     dbg(GENERAL_CHANNEL, "Packet Received\n");
     if(len==sizeof(pack)){
         pack* myMsg=(pack*) payload;
@@ -117,6 +130,27 @@ event void AMControl.stopDone(error_t err){}
             Package->protocol = protocol;
             memcpy(Package->payload, payload, length);
         }
+
+    void discoverNeighbors(){
+            //uint16_t tTol = 1;
+            makePack(&sendPackage, TOS_NODE_ID, TOS_NODE_ID, 1, PROTOCOL_PING, sequence++, "HI NEIGHBOR", PACKET_MAX_PAYLOAD_SIZE);
+            call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+            CommandHandler.printNeighbors;
+    }
+
+    event void CommandHandler.printNeighbors(){
+
+       uint16_t i = 0;
+       uint16_t max = call NeighborsList.size();
+
+       for(i = 0; i < max;i++){
+           dbg(NEIGHBOR_CHANNEL,"Printing\n");
+           //uint16_t Neighbor = call Neighbors.get(i);
+           //printf('%s', Neighbor);
+           //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+
+       }
+   }
 
     bool findPack(pack *Package) {      //findpack function
         uint16_t size = call PackList.size();     //get size of the list
