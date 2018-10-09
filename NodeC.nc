@@ -35,6 +35,6 @@ components new ListC(pack, 21) as PackListC;
 Node.PackList -> PackListC;
 
 components new ListC(uint16_t, 21) as NeighborsListC;
-Node.NeighborsList -> NeighborList;
+Node.NeighborsList -> NeighborsListC;
 
 }
