@@ -31,7 +31,7 @@ Node.Sender -> SimpleSendC;
 components CommandHandlerC;
 Node.CommandHandler -> CommandHandlerC;
 
-components new TimerMilliC as periodTimer;
+components new TimerMilliC as periodTimerC;
 Node.periodTimer -> periodTimerC
 
 components new ListC(pack, 21) as PackListC;
