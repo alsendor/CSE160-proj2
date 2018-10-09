@@ -115,7 +115,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
        for(i = 0; i < max;i++){
            dbg(NEIGHBOR_CHANNEL,"Printing\n");
            Neighbor = call NeighborsList.get(i);
-           printf('%s', Neighbor);
+           //printf('%s', Neighbor);
            dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
 
        }
@@ -146,7 +146,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 
     void discoverNeighbors(){
             //uint16_t tTol = 1;
-            makePack(&sendPackage, TOS_NODE_ID, TOS_NODE_ID, 1, PROTOCOL_PING, sequence++, "HI NEIGHBOR", PACKET_MAX_PAYLOAD_SIZE);
+            makePack(&sendPackage, TOS_NODE_ID, TOS_NODE_ID, 1, PROTOCOL_PING, sequenceCounter++, "HI NEIGHBOR", PACKET_MAX_PAYLOAD_SIZE);
             call Sender.send(sendPackage, AM_BROADCAST_ADDR);
             CommandHandler.printNeighbors;
     }
