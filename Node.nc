@@ -106,7 +106,19 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
     call Sender.send(sendPackage, AM_BROADCAST_ADDR);
     }
 
-    event void CommandHandler.printNeighbors(){}
+    event void CommandHandler.printNeighbors(){
+
+       uint16_t i = 0;
+       uint16_t max = call NeighborsList.size();
+
+       for(i = 0; i < max;i++){
+           dbg(NEIGHBOR_CHANNEL,"Printing\n");
+           uint16_t Neighbor = call NeighborsList.get(i);
+           printf('%s', Neighbor);
+           dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+
+       }
+   }
 
     event void CommandHandler.printRouteTable(){}
 
@@ -137,20 +149,6 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
             call Sender.send(sendPackage, AM_BROADCAST_ADDR);
             CommandHandler.printNeighbors;
     }
-
-    event void CommandHandler.printNeighbors(){
-
-       uint16_t i = 0;
-       uint16_t max = call NeighborsList.size();
-
-       for(i = 0; i < max;i++){
-           dbg(NEIGHBOR_CHANNEL,"Printing\n");
-           uint16_t Neighbor = call NeighborsList.get(i);
-           printf('%s', Neighbor);
-           dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
-
-       }
-   }
 
     bool findPack(pack *Package) {      //findpack function
         uint16_t size = call PackList.size();     //get size of the list
