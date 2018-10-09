@@ -110,10 +110,11 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 
        uint16_t i = 0;
        uint16_t max = call NeighborsList.size();
+       uint16_t Neighbor = 0;
 
        for(i = 0; i < max;i++){
            dbg(NEIGHBOR_CHANNEL,"Printing\n");
-           uint16_t Neighbor = call NeighborsList.get(i);
+           Neighbor = call NeighborsList.get(i);
            printf('%s', Neighbor);
            dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
 
