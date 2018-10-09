@@ -38,11 +38,11 @@ implementation{
     void pushPack(pack Package);            //Function to push packs (Implementation at the end)
 
     event void periodTimer.fired(){
-       ping(TOS_NODE_ID, "NEIGHBOR SEARCH");
+       //ping(TOS_NODE_ID, "NEIGHBOR SEARCH");
        discoverNeighbors();
-       dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+       //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
        CommandHandler.printNeighbors;
-       dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+       //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
 
    }
 
