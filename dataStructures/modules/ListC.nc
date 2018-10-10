@@ -98,4 +98,16 @@ implementation{
         else
         return FALSE;
     }
+
+		command t List.removeFromList(uint16_t index) {
+			t temp;
+			uint16_t i = 0;
+			temp = container[index];
+			for (i = 0; i < index; i++){
+				container[i+1] = container[i];
+			}
+			container[0] = temp;
+			temp = call List.popfront();
+			return temp;
+		}
 }
