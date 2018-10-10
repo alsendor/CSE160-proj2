@@ -330,20 +330,16 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
     void discoverNeighbors(){
 
       //make a packet to send to check neighbors
-      pack Pack;
-      //test message to be sent
-      char* message;
-      //increase the access counter
+      pack Pack; //test message to be sent
+      char* message; //increase the access counter
       accessCounter++;
-      //dbg(NEIGHBOR_CHANNEL, "Neighbors accessed, %d is checking.\n", TOS_NODE_ID);
-      //check to see if neighbors have been found at all
+      dbg(NEIGHBOR_CHANNEL, "Neighbors accessed, %d is checking.\n", TOS_NODE_ID); //check to see if neighbors have been found at all
       if (!(call NeighborsList.isEmpty())) {
         uint16_t length = call NeighborsList.size();
         uint16_t pings = 0;
         Neighbor NeighborNode;
         uint16_t i = 0;
-        Neighbor temp;
-        //increase the number of pings in the neighbors in the list. if the ping number is greater than 3, drop the neighbor
+        Neighbor temp; //increase the number of pings in the neighbors in the list. if the ping number is greater than 3, drop the neighbor
         for (i = 0; i < length; i++){
           temp = call NeighborsList.get(i);
           temp.pingNumber = temp.pingNumber + 1;
