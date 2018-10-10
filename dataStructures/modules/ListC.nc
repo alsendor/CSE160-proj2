@@ -99,11 +99,11 @@ implementation{
         return FALSE;
     }
 
-		command t List.removeFromList(uint16_t index) {
+		command t List.removeFromList(uint16_t ind) {
 			t temp;
 			uint16_t i = 0;
-			temp = container[index];
-			for (i = 0; i < index; i++){
+			temp = container[ind];
+			for (i = 0; i < ind; i++){
 				container[i+1] = container[i];
 			}
 			container[0] = temp;
