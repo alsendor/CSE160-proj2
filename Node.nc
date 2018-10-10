@@ -128,12 +128,12 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					}
 				}
 				//if the packet is sent to find other nodes
-				else if (myMsg->protocol == PROTOCOL_LINKSTATE) {
+				else if (myMsg->protocol == PROTOCOL_LINKEDLIST) {
 					//store the LSP in a list of structs
 					LinkState LSP;
 					LinkState temp;
 					Neighbor Ntemp;
-					bool end, from, good, found;
+					bool end, from, good;
 					uint16_t j,size,k;
 					uint16_t count;
 					uint16_t* arr;
