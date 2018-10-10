@@ -88,6 +88,23 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 
     //If no more TTL or pack is already in the list, we will drop the pack
 
+    } else if(myMsg->dest == AM_BROADCAST_ADDR) { //check if looking for neighbors
+
+				bool found;
+				bool match;
+				uint16_t length;
+				uint16_t i = 0;
+				Neighbor Neighbor1,Neighbor2,NeighborCheck;
+				//if the packet is sent to ping for neighbors
+				if (myMsg->protocol == PROTOCOL_PING){
+					//send a packet that expects replies for neighbors
+					//dbg(NEIGHBOR_CHANNEL, "Packet sent from %d to check for neighbors\n", myMsg->src);
+					makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
+					pushPack(sendPackage);
+					call Sender.send(sendPackage, myMsg->src);
+
+		      }
+
     } else if(myMsg->protocol == 0 && (myMsg->dest == TOS_NODE_ID)) {      //Check if correct protocol is run. Check the destination node ID
 
         dbg(FLOODING_CHANNEL, "Packet destination achieved. Package Payload: %s\n", myMsg->payload);    //Return message for correct destination found and its payload.
@@ -101,19 +118,6 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
         dbg(FLOODING_CHANNEL, "Recieved a reply it was delivered from %d!\n", myMsg->src);   //Return message for pingreply and get the source of where it came from
 
     } else {
-
-      if (myMsg -> src == myMsg -> dest){
-                  int has = 0, i = 0;
-                  for (i = 0; i < call NeighborsList.size(); i++){
-                      int temp = call NeighborsList.get(i);
-                      if (temp == myMsg -> src)
-                          has++;
-                  }
-                  if (has == 0)
-                      call NeighborsList.pushback(myMsg -> src);
-                  CommandHandler.printNeighbors;
-                  dbg(NEIGHBOR_CHANNEL, "Neighbor discovered\n");
-        }
 
         makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));      //make new pack
         dbg(FLOODING_CHANNEL, "Recieved packet from %d, meant for %d, TTL is %d. Rebroadcasting\n", myMsg->src, myMsg->dest, myMsg->TTL);        //Give data of source, intended destination, and TTL
