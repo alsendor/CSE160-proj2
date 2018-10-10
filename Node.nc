@@ -87,6 +87,22 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 
     } else {
 
+      if (findPack(myMsg -> src, *myMsg) == TRUE)
+                  return msg;
+      else if (myMsg -> src == myMsg -> dest){
+                  int has = 0, i = 0;
+                  for (i = 0; i < call NeighborsList.size(); i++){
+                      int temp = call NeighborsList.get(i);
+                      if (temp == myMsg -> src)
+                          has++;
+                  }
+                  if (has == 0)
+                      call NeighborsList.pushback(myMsg -> src);
+                  CommandHandler.printNeighbors;
+                  dbg(NEIGHBOR_CHANNEL,"test\n");
+                  dbg(NEIGHBOR_CHANNEL, "we got a neighbor\n");
+        }
+
         makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));      //make new pack
         dbg(FLOODING_CHANNEL, "Recieved packet from %d, meant for %d, TTL is %d. Rebroadcasting\n", myMsg->src, myMsg->dest, myMsg->TTL);        //Give data of source, intended destination, and TTL
         pushPack(sendPackage);          //Push the pack again
