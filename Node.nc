@@ -36,9 +36,11 @@ module Node{
     uses interface SimpleSend as Sender;
     uses interface CommandHandler;
     uses interface List<pack> as PackList;     //Create list of pack called PackList
+    
     uses interface List<uint16_t> as NeighborsList; //Create list of neighbors
     uses interface List<Neighbor> as NeighborsDropped; //Creates list of dropped neighbors
     uses interface List<Neighbor> as NeighborCosts; //Creates list of neighboring nodes costs
+
     uses interface List<LinkState> as RoutingTable; //Link State table used for routing algorithm
     uses interface List<LinkState> as Confirmed; //Confirmed table
     uses interface List<LinkState> as Tentative; //Tentative Table
