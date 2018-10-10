@@ -87,7 +87,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 
     } else {
 
-      if (findPack(myMsg -> src, *myMsg) == TRUE)
+      if (findPack(*myMsg) == TRUE)
                   return msg;
       else if (myMsg -> src == myMsg -> dest){
                   int has = 0, i = 0;
