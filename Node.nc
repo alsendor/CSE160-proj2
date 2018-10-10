@@ -215,7 +215,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 						//}
 						//findNext();
 						printLSP();
-						seqCounter++;
+						sequenceCounter++;
 						makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE, seqCounter, (uint8_t *)myMsg->payload, (uint8_t) sizeof(myMsg->payload));
 						pushPack(sendPackage);
 						call Sender.send(sendPackage, AM_BROADCAST_ADDR);
@@ -231,7 +231,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					for (i = 0; i < length; i++)
 					{
 						neighborCheck = call NeighborsList.get(i);
-						if (myMsg->src == NeighborCheck.Node)
+						if (myMsg->src == neighborCheck.Node)
 						{
 							match = TRUE;
 						}
@@ -247,7 +247,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 						LinkState temp;
 						neighbor1.Node = myMsg->src;
 						neighbor1.pingNumber = 0;
-						call NeighborsList.pushback(Neighbor1);
+						call NeighborsList.pushback(neighbor1);
 
 					}
 				}
@@ -287,17 +287,19 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 
     event void CommandHandler.printNeighbors(){
 
-       uint16_t i = 0;
-       uint16_t max = call NeighborsList.size();
-       uint16_t Neighbor = 0;
+      uint16_t i = 0;
+      uint16_t length = call NeighborsList.size();
+      Neighbor beingPrinted;
+      if (length == 0){
+        dbg(NEIGHBOR_CHANNEL, "No neighbors exist\n");
+      }
+      else {
+        for (i = 0; i < length; i++){
+          beingPrinted = call NeighborsList.get(i);
+          dbg(NEIGHBOR_CHANNEL, "Neighbor found at %d\n", beingPrinted.Node, i);
+          }
+}
 
-       for(i = 0; i < max;i++){
-           dbg(NEIGHBOR_CHANNEL,"Printing\n");
-           Neighbor = call NeighborsList.get(i);
-           //printf('%s', Neighbor);
-           dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
-
-       }
    }
 
     event void CommandHandler.printRouteTable(){}
@@ -334,9 +336,9 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
       //dbg(NEIGHBOR_CHANNEL, "Neighbors accessed, %d is checking.\n", TOS_NODE_ID);
       //check to see if neighbors have been found at all
       if (!(call NeighborsList.isEmpty())) {
-        uint16_t length = call Neighbors.size();
+        uint16_t length = call NeighborsList.size();
         uint16_t pings = 0;
-        Neighbor neighborNode;
+        Neighbor NeighborNode;
         uint16_t i = 0;
         Neighbor temp;
         //increase the number of pings in the neighbors in the list. if the ping number is greater than 3, drop the neighbor
@@ -346,7 +348,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
           pings = temp.pingNumber;
           //dbg(ROUTING_CHANNEL, "Pings at %d: %d\n", temp.Node, pings);
           if (pings > 3){
-            neighborNode = call NeighborsList.removeFromList(i);
+            NeighborNode = call NeighborsList.removeFromList(i);
             dbg(NEIGHBOR_CHANNEL, "Node %d dropped due to more than 3 pings\n", NeighborNode.Node);
             call NeighborsDropped.pushfront(NeighborNode);
             i--;
