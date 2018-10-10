@@ -37,14 +37,14 @@ Node.periodTimer -> periodTimerC;
 components new ListC(pack, 21) as PackListC;
 Node.PackList -> PackListC;
 
-components new ListC(uint16_t, 21) as NeighborsListC;
+components new ListC(Neighbor, 21) as NeighborsListC;
 Node.NeighborsList -> NeighborsListC;
 
 components new ListC(Neighbor, 64) as NeighborsDroppedC;
 Node.NeighborsDropped -> NeighborsDroppedC;
 
-components new ListC(Neighbor, 64) as NeighborsCostsC;
-Node.NeighborsCosts -> NeighborsCostsC;
+components new ListC(Neighbor, 64) as NeighborCostsC;
+Node.NeighborCosts -> NeighborCostsC;
 
 components new ListC(LinkState, 64) as RoutingTableC;
 Node.RoutingTable -> RoutingTableC;
