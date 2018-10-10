@@ -49,7 +49,7 @@ module Node{
 
 implementation{
     uint16_t sequenceCounter = 0;             //Create a sequence counter
-    uint16_t accessCounter - 0;               //Create an access counter
+    uint16_t accessCounter = 0;               //Create an access counter
 
     pack sendPackage;
     // Prototypes
@@ -219,7 +219,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 						//findNext();
 						//printLSP();
 						sequenceCounter++;
-						makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE, sequenceCounter, (uint8_t *)myMsg->payload, (uint8_t) sizeof(myMsg->payload));
+						makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKEDLIST, sequenceCounter, (uint8_t *)myMsg->payload, (uint8_t) sizeof(myMsg->payload));
 						pushPack(sendPackage);
 						call Sender.send(sendPackage, AM_BROADCAST_ADDR);
 					}
