@@ -48,7 +48,8 @@ module Node{
 }
 
 implementation{
-    uint16_t sequenceCounter = 0;             //Create a counter
+    uint16_t sequenceCounter = 0;             //Create a sequence counter
+    uint16_t accessCounter - 0;               //Create an access counter
 
     pack sendPackage;
     // Prototypes
@@ -148,7 +149,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					found = FALSE;
 					i = 0;
 					if (myMsg->src != TOS_NODE_ID){
-						&arr = myMsg->payload;
+						arr = myMsg->payload;
 						size = call RoutingTable.size();
 						LSP.Dest = myMsg->src;
 						LSP.Seq = myMsg->seq;
@@ -224,7 +225,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					}
 				}
 				//if we didn't find a match
-				if (!found && myMsg->protocol != PROTOCOL_LINKSTATE)
+				if (!found && myMsg->protocol != PROTOCOL_LINKEDLIST)
 				{
 					//add it to the list, using the memory of a previous dropped node
 					neighbor1 = call NeighborsDropped.get(0);
