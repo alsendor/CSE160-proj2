@@ -13,6 +13,21 @@
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
 
+typedef nx_struct Neighbor {
+   nx_uint16_t Node;
+   nx_uint16_t pingNumber;
+}Neighbor;
+
+typedef nx_struct LinkState {
+   nx_uint16_t Dest;
+   nx_uint16_t Cost;
+   nx_uint16_t Next;
+   nx_uint16_t Seq;
+   //nx_uint16_t from;
+   nx_uint8_t Neighbors[64];
+   nx_uint16_t NeighborsLength;
+}LinkState;
+
 module Node{
 
     uses interface Boot;
@@ -97,8 +112,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
                   if (has == 0)
                       call NeighborsList.pushback(myMsg -> src);
                   CommandHandler.printNeighbors;
-                  dbg(NEIGHBOR_CHANNEL,"test\n");
-                  dbg(NEIGHBOR_CHANNEL, "we got a neighbor\n");
+                  dbg(NEIGHBOR_CHANNEL, "Neighbor discovered\n");
         }
 
         makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));      //make new pack
