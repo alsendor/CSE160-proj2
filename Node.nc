@@ -148,7 +148,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					found = FALSE;
 					i = 0;
 					if (myMsg->src != TOS_NODE_ID){
-						arr = myMsg->payload;
+						&arr = myMsg->payload;
 						size = call RoutingTable.size();
 						LSP.Dest = myMsg->src;
 						LSP.Seq = myMsg->seq;
@@ -359,7 +359,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
         }
       }
       //ping the list of Neighbors
-      message = "pinged neighbors!\n";
+      message = "Pinged Neighbors!\n";
       makePack(&Pack, TOS_NODE_ID, AM_BROADCAST_ADDR, 2, PROTOCOL_PING, 1, (uint8_t*) message, (uint8_t) sizeof(message));
       //add the packet to the packet list
       pushPack(Pack);
