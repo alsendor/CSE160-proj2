@@ -23,7 +23,6 @@ typedef nx_struct LinkState {
    nx_uint16_t Cost;
    nx_uint16_t Next;
    nx_uint16_t Seq;
-   //nx_uint16_t from;
    nx_uint8_t Neighbors[64];
    nx_uint16_t NeighborsLength;
 }LinkState;
@@ -61,10 +60,10 @@ implementation{
     void pushPack(pack Package);            //Function to push packs (Implementation at the end)
 
     event void periodTimer.fired(){
-       //ping(TOS_NODE_ID, "NEIGHBOR SEARCH");
+      //ping(TOS_NODE_ID, "NEIGHBOR SEARCH");
        discoverNeighbors();
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
-       //CommandHandler.printNeighbors;
+       CommandHandler.printNeighbors;
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
 
    }
