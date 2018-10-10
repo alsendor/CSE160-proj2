@@ -245,8 +245,8 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					else
 					{
 						//not in list, so we're going to add it
+            LinkState temp;
 						dbg(NEIGHBOR_CHANNEL, "%d not found, put in list\n", myMsg->src);
-						LinkState temp;
 						neighbor1.Node = myMsg->src;
 						neighbor1.pingNumber = 0;
 						call NeighborsList.pushback(neighbor1);
