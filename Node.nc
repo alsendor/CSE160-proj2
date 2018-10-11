@@ -457,7 +457,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 			//check to see if neighbors is TOS_NODE_ID
 			for(j = 0; j < LSP.NeighborsLength; j++)
 			{
-				if(LSP.NeighborsList[j] == TOS_NODE_ID)
+				if(LSP.Neighbors[j] == TOS_NODE_ID)
 				{
 					LSP.Next = LSP.Dest;
 					call Confirmed.pushfront(LSP);
@@ -470,7 +470,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 			{
 				for(j=0; j<LSP.NeighborsLength; j++)
 				{
-					while(LSP2.Dest != LSP.NeighborsList[j] && k < tablesize)
+					while(LSP2.Dest != LSP.Neighbors[j] && k < tablesize)
 					{
 						k++;
 						LSP2 = call Tentative.get(k);
