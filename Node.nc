@@ -68,6 +68,11 @@ implementation{
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
        CommandHandler.printNeighbors;
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+       if (accessCounter > 1 && accessCounter % 5 == 0 && accessCounter < 16){
+		       floodLSP();
+		       printLSP();
+		       findNext();
+	}
 
    }
 
