@@ -405,7 +405,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 		LinkState O;
 		//dbg(ROUTING_CHANNEL, "LSP Initial Flood from %d\n", TOS_NODE_ID);
 		//check to see if there are neighbors to at all
-		if (!call Neighbors.isEmpty()){
+		if (!call NeighborsList.isEmpty()){
 			uint16_t i = 0;
 			uint16_t length = call Neighbors.size();
 			uint16_t directNeighbors[length+1];
@@ -421,7 +421,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 			//directNeighbors[length+1] = TOS_NODE_ID;
 			//dbg(ROUTING_CHANNEL, "this should be 0: %d\n", directNeighbors[length]);
 			//start flooding the packet
-			makePack(&LSP, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL-1, PROTOCOL_LINKSTATE, seqCounter++, (uint16_t*)directNeighbors, (uint16_t) sizeof(directNeighbors));
+			makePack(&LSP, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL-1, PROTOCOL_LINKEDLIST, seqCounter++, (uint16_t*)directNeighbors, (uint16_t) sizeof(directNeighbors));
 			pushPack(LSP);
 			call Sender.send(LSP, AM_BROADCAST_ADDR);
 		}
