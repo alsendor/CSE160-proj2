@@ -49,10 +49,10 @@ Node.NeighborCosts -> NeighborCostsC;
 components new ListC(LinkState, 64) as RoutingTableC;
 Node.RoutingTable -> RoutingTableC;
 
-components new ListC(LinkState, 64) as ConfirmedC;
-Node.Confirmed -> ConfirmedC;
+components new ListC(LinkState, 64) as ConfirmedTableC;
+Node.ConfirmedTable -> ConfirmedTableC;
 
-components new ListC(LinkState, 64) as TentativeC;
-Node.Tentative -> TentativeC;
+components new ListC(LinkState, 64) as TentativeTableC;
+Node.TentativeTable -> TentativeTableC;
 
 }

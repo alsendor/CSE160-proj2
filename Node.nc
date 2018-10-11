@@ -42,8 +42,8 @@ module Node{
     uses interface List<Neighbor> as NeighborCosts; //Creates list of neighboring nodes costs
 
     uses interface List<LinkState> as RoutingTable; //Link State table used for routing route
-    uses interface List<LinkState> as Confirmed; //Confirmed table
-    uses interface List<LinkState> as Tentative; //Tentative Table
+    uses interface List<LinkState> as ConfirmedTable; //ConfirmedTable table
+    uses interface List<LinkState> as TentativeTable; //TentativeTable Table
 
     uses interface Timer<TMilli> as periodTimer; //Creates implementation of timer for neighbor periods
 }
@@ -199,14 +199,14 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 								}
 								else
 								{
-									call Tentative.pushfront(call RoutingTable.front());
+									call TentativeTable.pushfront(call RoutingTable.front());
 									call RoutingTable.popfront();
 								}
 							}
-							while(!call Tentative.isEmpty())
+							while(!call TentativeTable.isEmpty())
 							{
-								call RoutingTable.pushback(call Tentative.front());
-								call Tentative.popfront();
+								call RoutingTable.pushback(call TentativeTable.front());
+								call TentativeTable.popfront();
 							}
 							dbg(GENERAL_CHANNEL, "list after removal loop\n");
 							printLSP();
@@ -440,21 +440,21 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 		LinkState LSP, LSP2;
 		bool popped = FALSE;
 		tablesize = call RoutingTable.size();
-		tentsize = call Tentative.size();
-		//Adds LSPs on routing table to Tentative based on cost
+		tentsize = call TentativeTable.size();
+		//Adds LSPs on routing table to TentativeTable based on cost
 		i=0;
 		while (tentsize != tablesize)
 		{
 			LSP = call RoutingTable.get(i);
 
 		}
-		//Check the Tentatives
+		//Check the TentativeTables
 		i=0;
-		while(!call Tentative.isEmpty())
+		while(!call TentativeTable.isEmpty())
 		{
 			k=0;
-			LSP = call Tentative.get(i);
-			LSP2 = call Tentative.get(k);
+			LSP = call TentativeTable.get(i);
+			LSP2 = call TentativeTable.get(k);
 			CC = LSP.Cost;
 			popped = FALSE;
 			//Check to see if neighbors is TOS_NODE_ID
@@ -463,8 +463,8 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 				if(LSP.Neighbors[j] == TOS_NODE_ID)
 				{
 					LSP.Next = LSP.Dest;
-					call Confirmed.pushfront(LSP);
-					call Tentative.popfront();
+					call ConfirmedTable.pushfront(LSP);
+					call TentativeTable.popfront();
 					popped = TRUE;
 					break;
 				}
@@ -476,7 +476,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					while(LSP2.Dest != LSP.Neighbors[j] && k < tablesize)
 					{
 						k++;
-						LSP2 = call Tentative.get(k);
+						LSP2 = call TentativeTable.get(k);
 					}
 
 				}
@@ -493,7 +493,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 		Link.Cost = Cost;
 		Link.Next = Next;
 		j = 0;
-		call Confirmed.pushfront(Link);
+		call ConfirmedTable.pushfront(Link);
 
 		if (Link.Dest != TOS_NODE_ID) {
 			//dbg(ROUTING_CHANNEL, "not TOS_NODE_ID\n");
@@ -504,17 +504,17 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 						if (temp.Neighbors[j] > 0) {
 							inTent = FALSE;
 							inCon = FALSE;
-							if (!call Tentative.isEmpty()) {
-								for (k = 0; k < call Tentative.size(); k++) {
-									temp2 = call Tentative.get(k);
+							if (!call TentativeTable.isEmpty()) {
+								for (k = 0; k < call TentativeTable.size(); k++) {
+									temp2 = call TentativeTable.get(k);
 									if (temp2.Dest == temp.Neighbors[j]) {
 										inTent = TRUE;
 									}
 								}
 							}
-							if (!call Confirmed.isEmpty()) {
-								for (m = 0; m < call Confirmed.size(); m++) {
-									temp3 = call Confirmed.get(m);
+							if (!call ConfirmedTable.isEmpty()) {
+								for (m = 0; m < call ConfirmedTable.size(); m++) {
+									temp3 = call ConfirmedTable.get(m);
 									if (temp3.Dest == temp.Neighbors[j]) {
 										inCon = TRUE;
 									}
@@ -524,7 +524,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 								temp.Dest = temp.Neighbors[j];
 								temp.Cost = Cost+1;
 								temp.Next = Dest;
-								call Tentative.pushfront(temp);
+								call TentativeTable.pushfront(temp);
 							}
 						}
 					}
@@ -540,14 +540,14 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					if (temp.Dest == next.Node) {
 						inTent = FALSE;
 						inCon = FALSE;
-						if (!call Tentative.isEmpty()) {
-							for (k = 0; k < call Tentative.size(); k++) {
-								temp2 = call Tentative.get(k);
+						if (!call TentativeTable.isEmpty()) {
+							for (k = 0; k < call TentativeTable.size(); k++) {
+								temp2 = call TentativeTable.get(k);
 								if (temp2.Dest == temp.Dest && temp2.Cost > temp.Cost) {
-									temp4 = call Tentative.removeFromList(k);
+									temp4 = call TentativeTable.removeFromList(k);
 									temp4.Cost = temp.Cost;
 									temp4.Next = temp.Next;
-									call Tentative.pushfront(temp4);
+									call TentativeTable.pushfront(temp4);
 									inTent = TRUE;
 								}
 								if (temp2.Dest == temp.Dest && temp2.Cost == temp.Cost) {
@@ -555,10 +555,10 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 								}
 							}
 						}
-						if (!call Confirmed.isEmpty()) {
-							//dbg(ROUTING_CHANNEL, "debugConfirmedNotEmpty\n");
-							for (m = 0; m < call Confirmed.size(); m++) {
-								temp3 = call Confirmed.get(m);
+						if (!call ConfirmedTable.isEmpty()) {
+							//dbg(ROUTING_CHANNEL, "debugConfirmedTableNotEmpty\n");
+							for (m = 0; m < call ConfirmedTable.size(); m++) {
+								temp3 = call ConfirmedTable.get(m);
 								if (temp3.Dest == temp.Dest) {
 									//dbg(ROUTING_CHANNEL, "ConSetTrue\n");
 									inCon = TRUE;
@@ -567,7 +567,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 						}
 						if (!inTent && !inCon) {
 							//dbg(ROUTING_CHANNEL, "noTent and noCon\n");
-							call Tentative.pushfront(temp);
+							call TentativeTable.pushfront(temp);
 						}
 					}
 				}
@@ -575,14 +575,14 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 		}
 
 		inCon = FALSE;
-		p = call Tentative.size();
+		p = call TentativeTable.size();
 		//dbg(ROUTING_CHANNEL, "p = %d\n", p);
 		if (p == 1) {
-			temp4 = call Tentative.get(0);
-			call Tentative.popback();
+			temp4 = call TentativeTable.get(0);
+			call TentativeTable.popback();
 			inCon = FALSE;
-			for (m = 0; m < call Confirmed.size(); m++) {
-				temp3 = call Confirmed.get(m);
+			for (m = 0; m < call ConfirmedTable.size(); m++) {
+				temp3 = call ConfirmedTable.get(m);
 				if (temp4.Dest == temp3.Dest) {
 					inCon = TRUE;
 				}
@@ -605,10 +605,10 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 
 		if (p > 1) {
 			//inCon = FALSE;
-			temp4 = call Tentative.get(0);
+			temp4 = call TentativeTable.get(0);
 			q = 0;
-			for (k = 1; k < call Tentative.size(); k++) {
-				temp2 = call Tentative.get(k);
+			for (k = 1; k < call TentativeTable.size(); k++) {
+				temp2 = call TentativeTable.get(k);
 				if (temp4.Cost > temp2.Cost) {
 					q = k;
 					temp4 = temp2;
@@ -618,9 +618,9 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					temp4 = temp2;
 				}
 			}
-			temp2 = call Tentative.get(q);
-			for (m = 0; m < call Confirmed.size(); m++) {
-				temp3 = call Confirmed.get(q);
+			temp2 = call TentativeTable.get(q);
+			for (m = 0; m < call ConfirmedTable.size(); m++) {
+				temp3 = call ConfirmedTable.get(q);
 				if (temp2.Dest == temp3.Dest) {
 					inCon = TRUE;
 				}
@@ -637,12 +637,12 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 				}
 			}
 			if (!inCon) {
-				if (call Tentative.size() - 1 > 1 && q == call Tentative.size() -1) {
-					call Tentative.popback();
+				if (call TentativeTable.size() - 1 > 1 && q == call TentativeTable.size() -1) {
+					call TentativeTable.popback();
 				}
 				else {
-					call Tentative.removeFromList(q);
-					call Tentative.popback();
+					call TentativeTable.removeFromList(q);
+					call TentativeTable.popback();
 				}
 				route(temp4.Dest, temp4.Cost, temp4.Next);
 			}
