@@ -63,6 +63,9 @@ implementation{
     void route(uint16_t Dest, uint16_t Cost, uint16_t Next);
     void findNext();
 
+    void floodLSP();
+    void printLSP();
+
     event void periodTimer.fired(){
        discoverNeighbors();
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
@@ -205,8 +208,8 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 								call RoutingTable.pushback(call Tentative.front());
 								call Tentative.popfront();
 							}
-							//dbg(GENERAL_CHANNEL, "list after removal loop\n");
-							//printLSP();
+							dbg(GENERAL_CHANNEL, "list after removal loop\n");
+							printLSP();
 						}
 						i=0;
 						count=0;
