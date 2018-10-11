@@ -210,7 +210,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 						}
 						LSP.Next = 0;
 						LSP.NeighborsLength = count;
-						//dbg(ROUTING_CHANNEL, "Table for %d: \n", TOS_NODE_ID);
+						dbg(ROUTING_CHANNEL, "Table for %d: \n", TOS_NODE_ID);
 						//if(good == TRUE)
 						//{
 							call RoutingTable.pushfront(LSP);
@@ -344,7 +344,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
           temp = call NeighborsList.get(i);
           temp.pingNumber = temp.pingNumber + 1;
           pings = temp.pingNumber;
-          //dbg(ROUTING_CHANNEL, "Pings at %d: %d\n", temp.Node, pings);
+          dbg(ROUTING_CHANNEL, "Pings at %d: %d\n", temp.Node, pings);
           if (pings > 3){
             NeighborNode = call NeighborsList.removeFromList(i);
             dbg(NEIGHBOR_CHANNEL, "Node %d dropped due to more than 3 pings\n", NeighborNode.Node);
@@ -403,14 +403,14 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
    void floodLSP(){ //run to flood LSPs, sending info of this node's direct neighbors
 		pack LSP;
 		LinkState O;
-		//dbg(ROUTING_CHANNEL, "LSP Initial Flood from %d\n", TOS_NODE_ID);
+		dbg(ROUTING_CHANNEL, "LSP Initial Flood from %d\n", TOS_NODE_ID);
 		//check to see if there are neighbors to at all
 		if (!call NeighborsList.isEmpty()){
 			uint16_t i = 0;
 			uint16_t length = call NeighborsList.size();
 			uint16_t directNeighbors[length+1];
 			Neighbor temp;
-			//dbg(ROUTING_CHANNEL, "length = %d/n", length);
+		/dbg(ROUTING_CHANNEL, "length = %d/n", length);
 			//move the neighbors into the array
 			for (i = 0; i < length; i++) {
 				temp = call NeighborsList.get(i);
@@ -418,8 +418,8 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 			}
 			//set a negative number to tell future loops to stop!
 			directNeighbors[length] = 0;
-			//directNeighbors[length+1] = TOS_NODE_ID;
-			//dbg(ROUTING_CHANNEL, "this should be 0: %d\n", directNeighbors[length]);
+			directNeighbors[length+1] = TOS_NODE_ID;
+			dbg(ROUTING_CHANNEL, "this should be 0: %d\n", directNeighbors[length]);
 			//start flooding the packet
 			makePack(&LSP, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL-1, PROTOCOL_LINKEDLIST, sequenceCounter++, (uint16_t*)directNeighbors, (uint16_t) sizeof(directNeighbors));
 			pushPack(LSP);
