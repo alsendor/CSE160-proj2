@@ -142,7 +142,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					}
 				}
 				//if the packet is sent to find other nodes
-				else if (myMsg->protocol == PROTOCOL_LINKEDLIST) {
+				else if (myMsg->protocol == PROTOCOL_LINKSTATE) {
 					//store the LSP in a list of structs
 					LinkState LSP;
 					LinkState temp;
@@ -230,13 +230,13 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 						findNext();
 						printLSP();
 						sequenceCounter++;
-						makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKEDLIST, sequenceCounter, (uint8_t *)myMsg->payload, (uint8_t) sizeof(myMsg->payload));
+						makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE, sequenceCounter, (uint8_t *)myMsg->payload, (uint8_t) sizeof(myMsg->payload));
 						pushPack(sendPackage);
 						call Sender.send(sendPackage, AM_BROADCAST_ADDR);
 					}
 				}
 				//if we didn't find a match
-				if (!found && myMsg->protocol != PROTOCOL_LINKEDLIST)
+				if (!found && myMsg->protocol != PROTOCOL_LINKSTATE)
 				{
 					//add it to the list, using the memory of a previous dropped node
 					neighbor1 = call NeighborsDropped.get(0);
@@ -427,7 +427,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 			directNeighbors[length+1] = TOS_NODE_ID;
 			dbg(ROUTING_CHANNEL, "this should be 0: %d\n", directNeighbors[length]);
 			//Flood the packet
-			makePack(&LSP, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL-1, PROTOCOL_LINKEDLIST, sequenceCounter++, (uint16_t*)directNeighbors, (uint16_t) sizeof(directNeighbors));
+			makePack(&LSP, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL-1, PROTOCOL_LINKSTATE, sequenceCounter++, (uint16_t*)directNeighbors, (uint16_t) sizeof(directNeighbors));
 			pushPack(LSP);
 			call Sender.send(LSP, AM_BROADCAST_ADDR);
 		}
