@@ -46,9 +46,11 @@ module Node{
     uses interface List<LinkState> as TentativeTable; //TentativeTable Table
 
     uses interface Timer<TMilli> as periodTimer; //Creates implementation of timer for neighbor periods
+
 }
 
 implementation{
+
     uint16_t sequenceCounter = 0;             //Create a sequence counter
     uint16_t accessCounter = 0;               //Create an access counter
 
@@ -84,20 +86,20 @@ implementation{
     call periodTimer.startPeriodic(5000);
 
     dbg(GENERAL_CHANNEL, "Booted\n");
-}
+  }
 
-event void AMControl.startDone(error_t err){
-    if(err == SUCCESS){
-        dbg(GENERAL_CHANNEL, "Radio On\n");
-    }
-    else{
-        call AMControl.start(); //Retry until success
-        }
-    }
+    event void AMControl.startDone(error_t err){
+      if(err == SUCCESS){
+          dbg(GENERAL_CHANNEL, "Radio On\n");
+      }
+      else{
+          call AMControl.start(); //Retry until success
+          }
+      }
 
-event void AMControl.stopDone(error_t err){}
+      event void AMControl.stopDone(error_t err){}
 
-event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
+    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
     dbg(GENERAL_CHANNEL, "Packet Received\n");
     if(len==sizeof(pack)){
         pack* myMsg=(pack*) payload;
@@ -107,6 +109,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
     //If no more TTL or pack is already in the list, we will drop the pack
 
     }
+    
     else if(myMsg->dest == AM_BROADCAST_ADDR) { //check if looking for neighbors
 
 				bool found;
@@ -646,8 +649,6 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 				}
 				route(temp4.Dest, temp4.Cost, temp4.Next);
 			}
-
 		}
 	}
-
 }
