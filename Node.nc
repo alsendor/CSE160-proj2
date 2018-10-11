@@ -413,7 +413,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 			//dbg(ROUTING_CHANNEL, "length = %d/n", length);
 			//move the neighbors into the array
 			for (i = 0; i < length; i++) {
-				temp = call Neighbors.get(i);
+				temp = call NeighborsList.get(i);
 				directNeighbors[i] = temp.Node;
 			}
 			//set a negative number to tell future loops to stop!
