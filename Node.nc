@@ -383,4 +383,48 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
         }
         call PackList.pushback(Package);      //continue adding packages to the list
     }
+
+    void printLSP()
+    {
+       LinkState temp;
+       uint16_t i, j;
+       for(i=0; i < call RoutingTable.size(); i++)
+     {
+       temp = call RoutingTable.get(i);
+       dbg(GENERAL_CHANNEL, "LSP from %d, Cost: %d, Next: %d, Seq: %d, Count; %d\n", temp.Dest, temp.Cost, temp.Next, temp.Seq, temp.NeighborsLength);
+       for(j=0; j<temp.NeighborsLength; j++)
+       {
+         //dbg(GENERAL_CHANNEL, "Neighbor at %d\n", temp.Neighbors[j]);
+       }
+     }
+     dbg(GENERAL_CHANNEL, "size is %d\n", call RoutingTable.size());
+   }
+
+   void floodLSP(){ //run to flood LSPs, sending info of this node's direct neighbors
+		pack LSP;
+		LinkState O;
+		//dbg(ROUTING_CHANNEL, "LSP Initial Flood from %d\n", TOS_NODE_ID);
+		//check to see if there are neighbors to at all
+		if (!call Neighbors.isEmpty()){
+			uint16_t i = 0;
+			uint16_t length = call Neighbors.size();
+			uint16_t directNeighbors[length+1];
+			Neighbor temp;
+			//dbg(ROUTING_CHANNEL, "length = %d/n", length);
+			//move the neighbors into the array
+			for (i = 0; i < length; i++) {
+				temp = call Neighbors.get(i);
+				directNeighbors[i] = temp.Node;
+			}
+			//set a negative number to tell future loops to stop!
+			directNeighbors[length] = 0;
+			//directNeighbors[length+1] = TOS_NODE_ID;
+			//dbg(ROUTING_CHANNEL, "this should be 0: %d\n", directNeighbors[length]);
+			//start flooding the packet
+			makePack(&LSP, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL-1, PROTOCOL_LINKSTATE, seqCounter++, (uint16_t*)directNeighbors, (uint16_t) sizeof(directNeighbors));
+			pushPack(LSP);
+			call Sender.send(LSP, AM_BROADCAST_ADDR);
+		}
+	}
+
 }
