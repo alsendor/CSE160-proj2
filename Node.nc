@@ -573,7 +573,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 					if (temp4.Next == temp3.Dest) {
 						temp4.Next = temp3.Next;
 						for (j = 0; j < call NeighborsList.size(); j++) {
-							next = call Neighbors.get(j);
+							next = call NeighborsList.get(j);
 							if (temp4.Next == next.Node) {
 								break;
 							}
