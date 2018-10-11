@@ -60,6 +60,7 @@ implementation{
     void pushPack(pack Package);            //Function to push packs (Implementation at the end)
 
     void route(uint16_t Dest, uint16_t Cost, uint16_t Next);
+    void findNext();
 
     event void periodTimer.fired(){
       //ping(TOS_NODE_ID, "NEIGHBOR SEARCH");
@@ -426,6 +427,57 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 			makePack(&LSP, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL-1, PROTOCOL_LINKEDLIST, sequenceCounter++, (uint16_t*)directNeighbors, (uint16_t) sizeof(directNeighbors));
 			pushPack(LSP);
 			call Sender.send(LSP, AM_BROADCAST_ADDR);
+		}
+	}
+
+  void findNext()
+	{
+		uint16_t i,j,k,CC;
+		uint16_t tablesize,tentsize;
+		LinkState LSP, LSP2;
+		bool popped = FALSE;
+		tablesize = call RoutingTable.size();
+		tentsize = call Tentative.size();
+		//adds all LSPs on routing table to Tentative based on cost
+		i=0;
+		while (tentsize != tablesize)
+		{
+			LSP = call RoutingTable.get(i);
+
+		}
+		//checking each of tentative
+		i=0;
+		while(!call Tentative.isEmpty())
+		{
+			k=0;
+			LSP = call Tentative.get(i);
+			LSP2 = call Tentative.get(k);
+			CC = LSP.Cost;
+			popped = FALSE;
+			//check to see if neighbors is TOS_NODE_ID
+			for(j = 0; j < LSP.NeighborsLength; j++)
+			{
+				if(LSP.NeighborsList[j] == TOS_NODE_ID)
+				{
+					LSP.Next = LSP.Dest;
+					call Confirmed.pushfront(LSP);
+					call Tentative.popfront();
+					popped = TRUE;
+					break;
+				}
+			}
+			if(popped = FALSE)
+			{
+				for(j=0; j<LSP.NeighborsLength; j++)
+				{
+					while(LSP2.Dest != LSP.NeighborsList[j] && k < tablesize)
+					{
+						k++;
+						LSP2 = call Tentative.get(k);
+					}
+
+				}
+			}
 		}
 	}
 
