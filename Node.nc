@@ -164,9 +164,9 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 						//dbg(GENERAL_CHANNEL, "myMsg->TTL is %d, LSP.Cost is %d, good is %d\n", myMsg->TTL, LSP.Cost, good);
 
 						if (!call RoutingTable.isEmpty()){
-							//dbg(GENERAL_CHANNEL, "list before removal loop\n");
-							//printLSP();
-							/*for (i = 0; i < call RoutingTable.size(); i++){
+							dbg(GENERAL_CHANNEL, "list before removal loop\n");
+							printLSP();
+							for (i = 0; i < call RoutingTable.size(); i++){
 								dbg(GENERAL_CHANNEL, "RoutingTable.size() is %d\n", call RoutingTable.size());
 								temp = call RoutingTable.get(i);
 								if ((temp.Dest == LSP.Dest) && (LSP.Seq >= temp.Seq))
@@ -184,7 +184,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 										call RoutingTable.removeFromList(k);
 									}
 								}
-							}*/
+							}
 							i=0;
 							while(!call RoutingTable.isEmpty())
 							{
