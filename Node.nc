@@ -410,7 +410,7 @@ event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
 			uint16_t length = call NeighborsList.size();
 			uint16_t directNeighbors[length+1];
 			Neighbor temp;
-		/dbg(ROUTING_CHANNEL, "length = %d/n", length);
+		dbg(ROUTING_CHANNEL, "length = %d/n", length);
 			//move the neighbors into the array
 			for (i = 0; i < length; i++) {
 				temp = call NeighborsList.get(i);
