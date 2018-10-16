@@ -125,7 +125,7 @@ implementation{
 				//if the packet is sent to ping for neighbors
 				if (myMsg->protocol == PROTOCOL_PING){
 					//send a packet that expects replies for neighbors
-					dbg(NEIGHBOR_CHANNEL, "Packet sent from %d to check for neighbors\n", myMsg->src);
+					//dbg(NEIGHBOR_CHANNEL, "Packet sent from %d to check for neighbors\n", myMsg->src);
 					makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
 					pushPack(sendPackage);
 					call Sender.send(sendPackage, myMsg->src);
@@ -135,14 +135,14 @@ implementation{
           //if the packet is sent to ping for replies
 				else if (myMsg->protocol == PROTOCOL_PINGREPLY){
 					//update ping number, search and see if the neighbor was found
-					dbg(NEIGHBOR_CHANNEL, "Packet recieved from %d, replying\n", myMsg->src);
+					//dbg(NEIGHBOR_CHANNEL, "Packet recieved from %d, replying\n", myMsg->src);
 					length = call NeighborsList.size();
 					found = FALSE;
 					for (i = 0; i < length; i++){
 						neighbor2 = call NeighborsList.get(i);
-						dbg(GENERAL_CHANNEL, "Pings at %d = %d\n", neighbor2.Node, neighbor2.pingNumber);
+						//dbg(GENERAL_CHANNEL, "Pings at %d = %d\n", neighbor2.Node, neighbor2.pingNumber);
 						if (neighbor2.Node == myMsg->src) {
-							dbg(NEIGHBOR_CHANNEL, "Node found, adding %d to list\n", myMsg->src);
+							//dbg(NEIGHBOR_CHANNEL, "Node found, adding %d to list\n", myMsg->src);
 							//reset the ping number if found to keep it from being dropped
 							neighbor2.pingNumber = 0;
 							found = TRUE;
@@ -266,7 +266,7 @@ implementation{
 					{
 						//not in list, so we're going to add it
             LinkState temp;
-						dbg(NEIGHBOR_CHANNEL, "%d not found, put in list\n", myMsg->src);
+						//dbg(NEIGHBOR_CHANNEL, "%d not found, put in list\n", myMsg->src);
 						neighbor1.Node = myMsg->src;
 						neighbor1.pingNumber = 0;
 						call NeighborsList.pushback(neighbor1);
