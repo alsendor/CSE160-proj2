@@ -609,7 +609,7 @@ implementation{
 				}
 			}
 		}
-		if(call Confirmed.isEmpty())
+		if(call ConfirmedTable.isEmpty())
 		{
 			for(i = 1; i <= 20; i++)
 			{
