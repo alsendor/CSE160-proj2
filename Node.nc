@@ -45,6 +45,8 @@ module Node{
     uses interface List<LinkState> as ConfirmedTable; //ConfirmedTable table
     uses interface List<LinkState> as TentativeTable; //TentativeTable Table
 
+    uses interface Hashmap<int> as nextTable;
+
     uses interface Timer<TMilli> as periodTimer; //Creates implementation of timer for neighbor periods
 
 }
@@ -614,7 +616,7 @@ implementation{
 				temp2.Dest = i;
 				temp2.Cost = cost[TOS_NODE_ID][i];
 				temp2.Next = call nextTable.get(i);
-				call Confirmed.pushfront(temp2);
+				call ConfirmedTable.pushfront(temp2);
 				//dbg(GENERAL_CHANNEL, "confirmed size: %d\n", call Confirmed.size());
 			}
 		}
