@@ -62,7 +62,8 @@ implementation{
     bool findPack(pack *Package);           //Function to find packs (Implementation at the end)
     void pushPack(pack Package);            //Function to push packs (Implementation at the end)
 
-    void route(uint16_t Dest, uint16_t Cost, uint16_t Next);
+    //void route(uint16_t Dest, uint16_t Cost, uint16_t Next);
+    void route();
     void findNext();
 
     void floodLSP();
@@ -78,6 +79,8 @@ implementation{
 		       printLSP();
 		       findNext();
 	}
+      if (accessCounter > 1 && accessCounter % 20 == 0 && accessCounter < 61)
+        route();
 
    }
 
@@ -109,7 +112,7 @@ implementation{
     //If no more TTL or pack is already in the list, we will drop the pack
 
     }
-    
+
     else if(myMsg->dest == AM_BROADCAST_ADDR) { //check if looking for neighbors
 
 				bool found;
@@ -487,6 +490,138 @@ implementation{
 		}
 	}
 
+  void route()
+	{
+		int nodesize[20];
+		int size = call RoutingTable.size();
+		int mn = 20;
+		int i,j,nexthop,cost[mn][mn],distance[mn],plist[mn];
+		int visited[mn],ncount,mindistance,nextnode;
+
+		int start_node = TOS_NODE_ID;
+		bool aMatrix[mn][mn];
+
+		LinkState temp, temp2;
+
+		for(i = 0; i < mn; i++)
+		{
+			for(j = 0; j < mn; j++)
+			{
+				aMatrix[i][j] = FALSE;
+			}
+		}
+
+		for(i = 0; i < size; i++)
+		{
+			temp = call RoutingTable.get(i);
+			for(j = 0; j < temp.NeighborsLength; j++)
+			{
+				aMatrix[temp.Dest][temp.Neighbors[j]] = TRUE;
+			}
+		}
+
+		for(i = 0; i < mn; i++)
+		{
+			for(j = 0; j < mn; j++)
+			{
+				if(aMatrix[i][j] == FALSE)
+				{
+					cost[i][j] = INFINITY;
+				}
+				else
+				{
+					cost[i][j] = 1;
+				}
+			}
+		}
+		if(TOS_NODE_ID == 1){
+		for(i = 0; i < mn; i++)
+		{
+			for(j = 0; j < mn; j++)
+			{
+				//printf("i=%d, j=%d, cost=%d\n", i, j, cost[i][j]);
+			}
+		}
+		}
+
+		for(i = 0; i < mn; i++)
+		{
+			distance[i] = cost[start_node][i];
+			plist[i] = start_node;
+			visited[i] = 0;
+		}
+
+		distance[start_node] = 0;
+		visited[start_node] = 1;
+		ncount = 1;
+
+		while(ncount < mn - 1)
+		{
+			mindistance = INFINITY;
+			for(i = 0; i < mn; i++)
+			{
+				if(distance[i] <= mindistance && visited[i] == 0)
+				{
+					mindistance = distance[i];
+					nextnode = i;
+				}
+			}
+			visited[nextnode] = 1;
+			for(i = 0; i < mn; i++)
+			{
+				if(visited[i] == 0)
+				{
+					if(mindistance + cost[nextnode][i] < distance[i])
+					{
+						distance[i] = mindistance + cost[nextnode][i];
+						plist[i] = nextnode;
+					}
+				}
+			}
+			ncount++;
+		}
+
+		for(i = 0; i < mn; i++)
+		{
+			nexthop = TOS_NODE_ID;
+			if(distance[i] != INFINITY)
+			{
+				if(i != start_node)
+				{
+					j = i;
+					do {
+						if(j != start_node)
+						{
+							nexthop = j;
+						}
+						j = plist[j];
+					} while(j != start_node);
+				}
+				else
+				{
+					nexthop = start_node;
+				}
+				if(nexthop != 0)
+				{
+					call nextTable.insert(i, nexthop);
+				}
+			}
+		}
+		if(call Confirmed.isEmpty())
+		{
+			for(i = 1; i <= 20; i++)
+			{
+				temp2.Dest = i;
+				temp2.Cost = cost[TOS_NODE_ID][i];
+				temp2.Next = call nextTable.get(i);
+				call Confirmed.pushfront(temp2);
+				//dbg(GENERAL_CHANNEL, "confirmed size: %d\n", call Confirmed.size());
+			}
+		}
+
+	}
+
+/*
   void route(uint16_t Dest, uint16_t Cost, uint16_t Next) {
 		LinkState Link, temp, temp2, temp3, temp4;
 		Neighbor next;
@@ -650,5 +785,5 @@ implementation{
 				route(temp4.Dest, temp4.Cost, temp4.Next);
 			}
 		}
-	}
+	} */
 }
