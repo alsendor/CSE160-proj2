@@ -34,6 +34,9 @@ Node.CommandHandler -> CommandHandlerC;
 
 Node.periodTimer -> periodTimerC;
 
+components new HashmapC(int, 64) as nextTableC;
+Node.nextTable -> nextTableC;
+
 components new ListC(pack, 21) as PackListC;
 Node.PackList -> PackListC;
 
