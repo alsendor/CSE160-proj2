@@ -37,6 +37,8 @@ module Node{
     uses interface Hashmap<int> as nextTable;
 */
 
+    uses interface Random as Random;
+
     uses interface Timer<TMilli> as Timer;
     uses interface Timer<TMilli> as tableTimer; //Creates implementation of timer for neighbor periods
 
