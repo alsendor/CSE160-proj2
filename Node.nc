@@ -37,7 +37,7 @@ module Node{
     uses interface Hashmap<int> as nextTable;
 */
 
-    uses interface Timer<TMilli> as timer;
+    uses interface Timer<TMilli> as Timer;
     uses interface Timer<TMilli> as tableTimer; //Creates implementation of timer for neighbor periods
 
 }
@@ -80,7 +80,11 @@ implementation{
     void sendRT();
 
     //Period timer function
+<<<<<<< HEAD
     event void timer.fired() {
+=======
+    event void Timer.fired() {
+>>>>>>> 8f543a3ab4feafaa5f1bc452940ee04372b66f59
        scanForNeighbors();
        uint8_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
 
