@@ -18,15 +18,6 @@ typedef nx_struct Neighbor {
    nx_uint16_t pingNumber;
 }Neighbor;
 
-typedef nx_struct LinkState {
-   nx_uint16_t Dest;
-   nx_uint16_t Cost;
-   nx_uint16_t Next;
-   nx_uint16_t Seq;
-   nx_uint8_t Neighbors[64];
-   nx_uint16_t NeighborsLength;
-}LinkState;
-
 module Node{
 
     uses interface Boot;
@@ -36,59 +27,91 @@ module Node{
     uses interface CommandHandler;
 
     uses interface List<pack> as PackList;     //Create list of pack called PackList
-
+/*
     uses interface List<Neighbor> as NeighborsList; //Create list of neighbors
     uses interface List<Neighbor> as NeighborsDropped; //Creates list of dropped neighbors
     uses interface List<Neighbor> as NeighborCosts; //Creates list of neighboring nodes costs
-
     uses interface List<LinkState> as RoutingTable; //Link State table used for routing route
     uses interface List<LinkState> as ConfirmedTable; //ConfirmedTable table
     uses interface List<LinkState> as TentativeTable; //TentativeTable Table
-
     uses interface Hashmap<int> as nextTable;
+*/
 
-    uses interface Timer<TMilli> as periodTimer; //Creates implementation of timer for neighbor periods
+    uses interface Timer<TMilli> as timer;
+    uses interface Timer<TMilli> as tableTimer; //Creates implementation of timer for neighbor periods
 
 }
 
 implementation{
 
     uint16_t sequenceCounter = 0;             //Create a sequence counter
-    uint16_t accessCounter = 0;               //Create an access counter
+  //  uint16_t accessCounter = 0;               //Create an access counter
+    unit8_t maxHops = 18;
+    unit8_t NeighborsListSize = 19;
+    unit8_t maxNeighborTTL = 20;
+    unit8_t Neighbors[19];
+    unit8_t Routing[255][3];
 
     pack sendPackage;
+    bool fired = FALSE;
+    bool initialized = FALSE;
 
     void discoverNeighbors();
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
-    bool findPack(pack *Package);           //Function to find packs (Implementation at the end)
-    void pushPack(pack Package);            //Function to push packs (Implementation at the end)
+    void packLog(pack *payload);           //Function to create a log of packs
+    bool packSeen(pack *payload);            //Function to check for previously seen packs
 
     //void route(uint16_t Dest, uint16_t Cost, uint16_t Next);
+
+    //Functions for handling neighbor nodes
     void route();
-    void findNext();
+    void addNeighbor(unit8_t Neighbor);
+    void lessNeighborTTL();
+    void sendToNeighbor(pack *recievedMsg)
+    void destNeighbor(pack *recievedMsg);
+    void scanForNeighbors();
 
-    void floodLSP();
-    void printLSP();
+    //Distance Vector table initialize, insert new, merge route, split horizon, and send table to all neighbors
+    void initialize();
+    void insert(unit8_t dest, unit8_t cost, unit8_t nextHop);
+    bool mergeRoute(unit8_t *newRoute, unit8_t src);
+    void splitHorizon(unit8_t nextHop);
+    void sendTable();
 
-    event void periodTimer.fired(){
-       discoverNeighbors();
+    event void periodTimer.fired() {
+       scanForNeighbors();
+       unit8_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
+
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
-       CommandHandler.printNeighbors;
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
-       if (accessCounter > 1 && accessCounter % 5 == 0 && accessCounter < 16){
-		       floodLSP();
-		       printLSP();
-		       findNext();
-	}
-      if (accessCounter > 1 && accessCounter % 20 == 0 && accessCounter < 61)
-        route();
 
-   }
+       Tinitial = 20000 + (call Random.rand32() % 1000);
+       Tinterval = 25000 + (call Random.rand32() % 10000);
 
-    event void Boot.booted(){
+       if (!fired) {
+         call tableTimer.startPeriodic(Tinitial, Tinterval);
+         fired = TRUE;
+       }
+     }
+
+     event void tableTimer.fired() {
+       if (initialized == FALSE) {
+         initialize();
+         initialized = TRUE;
+       }
+       else {
+         sendTable();
+       }
+     }
+
+    event void Boot.booted() {
+    unit8_t Tinitial, Tinterval;
     call AMControl.start();
-    call periodTimer.startPeriodic(5000);
+
+    Tinitial = 500 + (call Random.rand32() % 1000);
+    Tinterval = 2500 + (call Random.rand32() % 10000);
+    call periodTimer.startPeriodic(Tinitial, Tinterval);
 
     dbg(GENERAL_CHANNEL, "Booted\n");
   }
@@ -97,7 +120,7 @@ implementation{
       if(err == SUCCESS){
           dbg(GENERAL_CHANNEL, "Radio On\n");
       }
-      else{
+      else {
           call AMControl.start(); //Retry until success
           }
       }
@@ -105,15 +128,9 @@ implementation{
       event void AMControl.stopDone(error_t err){}
 
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
-    dbg(GENERAL_CHANNEL, "Packet Received\n");
-    if(len==sizeof(pack)){
-        pack* myMsg=(pack*) payload;
-
-    if((myMsg->TTL == 0) || findPack(myMsg)){
-
-    //If no more TTL or pack is already in the list, we will drop the pack
-
-    }
+      bool diffRoute = FALSE;
+      pack *recievedMsg;
+      recievedMsg = (pack *)payload;
 
     else if(myMsg->dest == AM_BROADCAST_ADDR) { //check if looking for neighbors
 
