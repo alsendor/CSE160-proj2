@@ -143,7 +143,6 @@ implementation{
           dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) TTL ran out\n", recievedMsg->src, recievedMsg->dest);
           return msg;
         }
-      }
 
       //If packet has been seen
       else if (packSeen(recievedMsg)) {
@@ -198,6 +197,7 @@ implementation{
     dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) is Corrupted", recievedMsg->src, recievedMsg->dest);
     return msg;
   }
+  
   event void CommandHandler.ping(unit16_t destination, unit8_t *payload){
     sequenceCounter++;
     makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL + 5, PROTOCOL_PING, sequenceCounter, payload, PACKET_MAX_PAYLOAD_SIZE);
