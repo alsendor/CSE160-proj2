@@ -31,7 +31,7 @@ module Node{
     uses interface List<Neighbor> as NeighborsList; //Create list of neighbors
     uses interface List<Neighbor> as NeighborsDropped; //Creates list of dropped neighbors
     uses interface List<Neighbor> as NeighborCosts; //Creates list of neighboring nodes costs
-    uses interface List<LinkState> as RoutingTable; //Link State table used for routing route
+    uses interface List<LinkState> as RoutingTable; //Link State table used for Routing route
     uses interface List<LinkState> as ConfirmedTable; //ConfirmedTable table
     uses interface List<LinkState> as TentativeTable; //TentativeTable Table
     uses interface Hashmap<int> as nextTable;
@@ -59,8 +59,8 @@ implementation{
     void discoverNeighbors();
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
-    void packLog(pack *payload);           //Function to create a log of packs
-    bool packSeen(pack *payload);            //Function to check for previously seen packs
+    void pushPack(pack Package);           //Function to create a log of packs
+    bool findPack(pack *Package);            //Function to check for previously seen packs
 
     //void route(uint16_t Dest, uint16_t Cost, uint16_t Next);
 
@@ -401,9 +401,9 @@ implementation{
     event void CommandHandler.printNeighbors(){
 
       int i, cnt = 0;
-      dbg(GENERAL_CHANNEL, "NeighborList Size: %d\n", NeighborListSize);
-      for(i = 1; i < (NeighborListSize); i++) {
-           if(NeighborList[i] > 0){
+      dbg(GENERAL_CHANNEL, "Neighbors Size: %d\n", NeighborsSize);
+      for(i = 1; i < (NeighborsSize); i++) {
+           if(Neighbors[i] > 0){
                 dbg(NEIGHBOR_CHANNEL, "%d -> %d\n", TOS_NODE_ID, i);
                 cnt++;
            }
@@ -465,6 +465,61 @@ implementation{
         call PackList.pushback(Package);      //continue adding packages to the list
     }
 
+//Neighbor Discovery
+
+    void addNeighbor(unit8_t Neighbor) {
+      if(Neighbor == 0)
+          dbg(GENERAL_CHANNEL, "This is the neighbor at Source 0");
+       Neighbors[Neighbor] = MAX_NEIGHBOR_TTL;
+    }
+
+    void lessNeighborTTL() {
+      int i;
+      for (i = 0; i < NeighborsSize; i++) {
+            if(Neighbors[i] == 1) {
+                  Neighbors[i] -= 1;
+                  Routing[i][1] = 255;
+                  dbg (NEIGHBOR_CHANNEL, "\t Node %d Dropped from the Network \n", i);
+
+                  // NeighborPing to neighbor we are dropppping
+                  nodeSeq++;
+                  makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, nodeSeq, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
+                  call Sender.send(sendPackage, (uint8_t) i);
+            }
+            if (Neighbors[i] > 1) {
+                  Neighbors[i] -= 1;
+            }
+      }
+    }
+
+    void sendToNeighbor(pack *recievedMsg) {
+      if(destIsNeighbor(recievedMsg)) {
+              dbg(NEIGHBOR_CHANNEL, "\tDeliver to Destination\n");
+              call Sender.send(sendPackage, recievedMsg->dest);
+        } else {
+                //dbg(NEIGHBOR_CHANNEL, "\tTrynna Forward To Neighbors\n");
+              call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+        }
+    }
+
+    void destNeighbor(pack *recievedMsg){
+      if(Neighbors[recievedMsg->dest] > 0)
+          return 1;
+      return 0;
+    }
+
+    void scanForNeighbors(){
+      int i;
+      if (!initialized) {
+             nodeSeq++;
+             makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, nodeSeq, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
+             call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+      } else  {
+             reduceNeighborsTTL();
+      }
+    }
+
+    /*
     void discoverNeighbors(){
 
       pack Pack; //Packet to be sent to neighbors
@@ -497,14 +552,14 @@ implementation{
       pushPack(Pack); //add the packet to the packet list
       call Sender.send(Pack, AM_BROADCAST_ADDR);
 
-    }
+    } */
 
     void initializeRT() {
         int i, j, neighbor;
         bool contains;
         dbg(ROUTING_CHANNEL, "\tMOTE(%d) Initializing Routing Table\n");
 
-        // Setting all the Nodes in our pool/routing table to  MAX_HOP and setting their nextHop to our emlpty first cell
+        // Setting all the Nodes in our pool/Routing table to  MAX_HOP and setting their nextHop to our emlpty first cell
         for(i = 1; i < 20; i++) {
                 Routing[i][0] = i;
                 Routing[i][1] = 255;
@@ -517,8 +572,8 @@ implementation{
         Routing[TOS_NODE_ID][2] = TOS_NODE_ID;
 
         // Setting the cost to all my neighbors
-        for(j = 1; j < NeighborListSize; j++) {
-                 if(NeighborList[j] > 0)
+        for(j = 1; j < NeighborsSize; j++) {
+                 if(Neighbors[j] > 0)
                       insert(j, 1, j);
         }
         /* dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~initialize\n", TOS_NODE_ID);
@@ -527,19 +582,76 @@ implementation{
 
    void insertRT(uint8_t dest, uint8_t cost, uint8_t nextHop) {
         //input data into tuple
-        routing[dest][0] = dest;
-        routing[dest][1] = cost;
-        routing[dest][2] = nextHop;
+        Routing[dest][0] = dest;
+        Routing[dest][1] = cost;
+        Routing[dest][2] = nextHop;
   }
 
-    void sendRT() {
+  void sendRT() {
       int i;
-      for (i = 1; i < NeighborListSize; i++)
-      if(NeighborList[i] > 0)
+      for (i = 1; i < NeighborsSize; i++)
+      if(Neighbors[i] > 0)
       splitHorizon((uint8_t)i);
+  }
+
+  bool mergeRoute(unit8_t *newRoute, unit8_t src) {
+
+    int node, cost, next, i, j;
+    bool alteredRoute = false;
+
+    for (i = 0; i < 20; i++) {
+        for (j = 0; j < 7; j++) {
+            // Saving values for cleaner Code
+            node = *(newRoute + (j * 3));
+            cost = *(newRoute + (j * 3) + 1);
+            next = *(newRoute + (j * 3) + 2);
+
+            if (node == routing[i][0]) {
+                    if ((cost+1)<routing[i][1]) {
+                            Routing[i][0] = node;
+                            Routing[i][1] = cost + 1;
+                            Routing[i][2] = src;
+
+                            alteredRoute = TRUE;
+                    }
+            }
+        }
     }
 
+    return alteredRoute;
 
+  }
+
+  void splitHorizon(unit8_t nextHop) {
+
+    int i, j;
+
+    //The below values will keep track of the first node
+    uint8_t* start;
+    uint8_t* poisonTable = NULL;
+    poisonTable = malloc(sizeof(Routing));
+    start = malloc(sizeof(Routing));
+
+    //Using memcpy to copy routing table information
+    memcpy(poisonTable, &Routing, sizeof(Routing));
+    start = poisonTable;
+
+    //Poison Control Implementation: make the path cost the max hop at the moment
+    for(i = 0; i < 20; i++)
+      if (nextHop == i)
+        *(poisonTable + (i*3) + 1) = 25;
+
+    //Semd the payload into seperate parts
+    for(i = 0; i < 20; i++) {
+      if(i % 7 == 0){
+          nodeSeq++;
+          makePack(&sendPackage, TOS_NODE_ID, nextHop, 2, PROTOCOL_DV, nodeSeq, poisonTabel, sizeof(Routing));
+          call Sender.send(sendPackage, nextHop);
+      }
+        poisonTable += 3;
+     }
+
+  }
 
 /*
   void route(uint16_t Dest, uint16_t Cost, uint16_t Next) {
