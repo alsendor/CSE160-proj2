@@ -45,12 +45,12 @@ module Node{
 implementation{
 
     uint16_t sequenceCounter = 0;             //Create a sequence counter
-  //  uint16_t accessCounter = 0;               //Create an access counter
-    unit8_t maxHops = 18;
-    unit8_t NeighborsListSize = 19;
-    unit8_t maxNeighborTTL = 20;
-    unit8_t Neighbors[19];
-    unit8_t Routing[255][3];
+  //uint16_t accessCounter = 0;               //Create an access counter
+    uint8_t maxHops = 18;
+    uint8_t NeighborsListSize = 19;
+    uint8_t maxNeighborTTL = 20;
+    uint8_t Neighbors[19];
+    uint8_t Routing[255][3];
 
     pack sendPackage;
     bool fired = FALSE;
@@ -66,7 +66,7 @@ implementation{
 
     //Functions for handling neighbor nodes
     void route();
-    void addNeighbor(unit8_t Neighbor);
+    void addNeighbor(uint8_t Neighbor);
     void lessNeighborTTL();
     void sendToNeighbor(pack *recievedMsg)
     void destNeighbor(pack *recievedMsg);
@@ -74,15 +74,15 @@ implementation{
 
     //Distance Vector table initialize, insert new, merge route, split horizon, and send table to all neighbors
     void initializeRT();
-    void insertRT(unit8_t dest, unit8_t cost, unit8_t nextHop);
-    bool mergeRoute(unit8_t *newRoute, unit8_t src);
-    void splitHorizon(unit8_t nextHop);
+    void insertRT(uint8_t dest, uint8_t cost, uint8_t nextHop);
+    bool mergeRoute(uint8_t *newRoute, uint8_t src);
+    void splitHorizon(uint8_t nextHop);
     void sendRT();
 
     //Period timer function
     event void periodTimer.fired() {
        scanForNeighbors();
-       unit8_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
+       uint8_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
 
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
@@ -108,7 +108,7 @@ implementation{
      }
 
     event void Boot.booted() {
-    unit8_t Tinitial, Tinterval;
+    uint8_t Tinitial, Tinterval;
     call AMControl.start();
 
     Tinitial = 500 + (call Random.rand32() % 1000);
@@ -158,7 +158,7 @@ implementation{
 
         //sending reply
         sequenceCounter++;
-        makePack(&sendPackage, recievedMsg->dest, recievedMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequenceCounter, (unit8_t*)recievedMsg->payload, len);
+        makePack(&sendPackage, recievedMsg->dest, recievedMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequenceCounter, (uint8_t*)recievedMsg->payload, len);
         packLog(&sendPackage);
         call Sender.send(sendPackage, AM_BROADCAST_ADDR);
         return msg;
@@ -179,7 +179,7 @@ implementation{
       //Receive DV table
       else if (recievedMsg->dest == TOS_NODE_ID && recievedMsg->protocol == PROTOCOL_DV) {
         dbg(GENERAL_CHANNEL, "Calling Merge Route\n");
-        diffRoute = mergeRoute((unit8_t*) recievedMsg->payload, (unit8_t) recievedMsg->src);
+        diffRoute = mergeRoute((uint8_t*) recievedMsg->payload, (uint8_t) recievedMsg->src);
         if(diffRoute){
           sendRT();
         }
@@ -188,7 +188,7 @@ implementation{
       //If packet is not at intended destination
       else if (recievedMsg->dest != TOS_NODE_ID && recievedMsg->dest != AM_BROADCAST_ADDR) {
         recievedMsg->TTL--;
-        makePack(&sendPackage, recievedMsg->src, recievedMsg->dest, recievedMsg->TTL, recievedMsg->protocol, recievedMsg->seq, (unit8_t*)recievedMsg->payload, len);
+        makePack(&sendPackage, recievedMsg->src, recievedMsg->dest, recievedMsg->TTL, recievedMsg->protocol, recievedMsg->seq, (uint8_t*)recievedMsg->payload, len);
         packLog(&sendPackage);
         sendToNeighbor(&sendPackage);
         return msg;
@@ -199,7 +199,7 @@ implementation{
     dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) is Corrupted", recievedMsg->src, recievedMsg->dest);
     return msg;
   }
-  event void CommandHandler.ping(unit16_t destination, unit8_t *payload){
+  event void CommandHandler.ping(unit16_t destination, uint8_t *payload){
     sequenceCounter++;
     makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL + 5, PROTOCOL_PING, sequenceCounter, payload, PACKET_MAX_PAYLOAD_SIZE);
     packLog(&sendPackage);
@@ -456,7 +456,7 @@ implementation{
       if (call PackList.size() == 64) {
         call PackList.popfront();
       }
-      makePack(&packLog, payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq, (unit8_t*) payload->payload, sizeof(pack));
+      makePack(&packLog, payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq, (uint8_t*) payload->payload, sizeof(pack));
       call PackList.pushback(loggedP);
 
     }
@@ -500,7 +500,7 @@ implementation{
 
 //Neighbor Discovery
 
-    void addNeighbor(unit8_t Neighbor) {
+    void addNeighbor(uint8_t Neighbor) {
       if(Neighbor == 0)
           dbg(GENERAL_CHANNEL, "This is the neighbor at Source 0");
        Neighbors[Neighbor] = MAX_NEIGHBOR_TTL;
@@ -627,7 +627,7 @@ implementation{
       splitHorizon((uint8_t)i);
   }
 
-  bool mergeRoute(unit8_t *newRoute, unit8_t src) {
+  bool mergeRoute(uint8_t *newRoute, uint8_t src) {
 
     int node, cost, next, i, j;
     bool alteredRoute = false;
@@ -655,7 +655,7 @@ implementation{
 
   }
 
-  void splitHorizon(unit8_t nextHop) {
+  void splitHorizon(uint8_t nextHop) {
 
     int i, j;
 
