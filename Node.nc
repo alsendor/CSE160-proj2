@@ -44,13 +44,15 @@ module Node{
 
 implementation{
 
-    uint16_t sequenceCounter = 0;             //Create a sequence counter
-  //  uint16_t accessCounter = 0;               //Create an access counter
+    uint16_t sequenceCounter;
+    uint8_t maxHops, NeighborsListSize, maxNeighborTTL;
+    unit8_t Neighbors[19];
+    unit8_t Routing[255][3];
+
+    uint16_t sequenceCounter = 0;
     unit8_t maxHops = 18;
     unit8_t NeighborsListSize = 19;
     unit8_t maxNeighborTTL = 20;
-    unit8_t Neighbors[19];
-    unit8_t Routing[255][3];
 
     pack sendPackage;
     bool fired = FALSE;
