@@ -415,6 +415,23 @@ implementation{
         call PackList.pushback(Package);      //continue adding packages to the list
     }
 
+    void addNeighbor(unit8_t Neighbor) {
+      
+    }
+    void lessNeighborTTL() {
+
+    }
+    void sendToNeighbor(pack *recievedMsg) {
+
+    }
+    void destNeighbor(pack *recievedMsg){
+
+    }
+    void scanForNeighbors(){
+
+    }
+
+    /*
     void discoverNeighbors(){
 
       pack Pack; //Packet to be sent to neighbors
@@ -447,7 +464,7 @@ implementation{
       pushPack(Pack); //add the packet to the packet list
       call Sender.send(Pack, AM_BROADCAST_ADDR);
 
-    }
+    } */
 
     void initializeRT() {
         int i, j, neighbor;
