@@ -32,7 +32,12 @@ Node.Sender -> SimpleSendC;
 components CommandHandlerC;
 Node.CommandHandler -> CommandHandlerC;
 
+Node.periodTimer -> periodTimerC;
+
+
 components new ListC(pack, 21) as PackListC;
 Node.PackList -> PackListC;
+
+
 
 }
