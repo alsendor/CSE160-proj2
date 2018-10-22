@@ -17,7 +17,8 @@ implementation {
 components MainC;
 components Node;
 components new AMReceiverC(AM_PACK) as GeneralReceive;
-components new TimerMilliC() as periodTimerC;
+components new TimerMilliC() as tableTimerC;
+components new TimerMilliC() as TimerC;
 
 Node -> MainC.Boot;
 
@@ -32,7 +33,8 @@ Node.Sender -> SimpleSendC;
 components CommandHandlerC;
 Node.CommandHandler -> CommandHandlerC;
 
-Node.periodTimer -> periodTimerC;
+Node.tableTimer -> tableTimerC;
+Node.Timer -> TimerC;
 
 
 components new ListC(pack, 21) as PackListC;

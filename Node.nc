@@ -80,7 +80,7 @@ implementation{
     void sendRT();
 
     //Period timer function
-    event void periodTimer.fired() {
+    event void timer.fired() {
        scanForNeighbors();
        uint8_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
 
