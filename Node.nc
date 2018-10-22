@@ -49,10 +49,10 @@ implementation{
     unit8_t Neighbors[19];
     unit8_t Routing[255][3];
 
-    uint16_t sequenceCounter = 0;
-    unit8_t maxHops = 18;
-    unit8_t NeighborsListSize = 19;
-    unit8_t maxNeighborTTL = 20;
+    sequenceCounter = 0;
+    maxHops = 18;
+    NeighborsListSize = 19;
+    maxNeighborTTL = 20;
 
     pack sendPackage;
     bool fired = FALSE;
