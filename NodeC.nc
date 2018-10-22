@@ -32,30 +32,7 @@ Node.Sender -> SimpleSendC;
 components CommandHandlerC;
 Node.CommandHandler -> CommandHandlerC;
 
-Node.periodTimer -> periodTimerC;
-
-components new HashmapC(int, 64) as nextTableC;
-Node.nextTable -> nextTableC;
-
 components new ListC(pack, 21) as PackListC;
 Node.PackList -> PackListC;
-
-components new ListC(Neighbor, 21) as NeighborsListC;
-Node.NeighborsList -> NeighborsListC;
-
-components new ListC(Neighbor, 64) as NeighborsDroppedC;
-Node.NeighborsDropped -> NeighborsDroppedC;
-
-components new ListC(Neighbor, 64) as NeighborCostsC;
-Node.NeighborCosts -> NeighborCostsC;
-
-components new ListC(LinkState, 64) as RoutingTableC;
-Node.RoutingTable -> RoutingTableC;
-
-components new ListC(LinkState, 64) as ConfirmedTableC;
-Node.ConfirmedTable -> ConfirmedTableC;
-
-components new ListC(LinkState, 64) as TentativeTableC;
-Node.TentativeTable -> TentativeTableC;
 
 }
