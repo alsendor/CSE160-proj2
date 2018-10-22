@@ -73,11 +73,11 @@ implementation{
     void scanForNeighbors();
 
     //Distance Vector table initialize, insert new, merge route, split horizon, and send table to all neighbors
-    void initialize();
-    void insert(unit8_t dest, unit8_t cost, unit8_t nextHop);
+    void initializeRT();
+    void insertRT(unit8_t dest, unit8_t cost, unit8_t nextHop);
     bool mergeRoute(unit8_t *newRoute, unit8_t src);
     void splitHorizon(unit8_t nextHop);
-    void sendTable();
+    void sendRT();
 
     //Period timer function
     event void periodTimer.fired() {
@@ -103,7 +103,7 @@ implementation{
          initialized = TRUE;
        }
        else {
-         sendTable();
+         sendRT();
        }
      }
 
@@ -153,7 +153,7 @@ implementation{
 
       //Ping and ping reply
       if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == TOS_NODE_ID) {
-        
+
       }
 
     else if(myMsg->dest == AM_BROADCAST_ADDR) { //check if looking for neighbors
@@ -350,22 +350,29 @@ implementation{
 
     event void CommandHandler.printNeighbors(){
 
-      uint16_t i = 0;
-      uint16_t length = call NeighborsList.size();
-      Neighbor beingPrinted;
-      if (length == 0){
-        dbg(NEIGHBOR_CHANNEL, "No neighbors exist\n");
+      int i, cnt = 0;
+      dbg(GENERAL_CHANNEL, "NeighborList Size: %d\n", NeighborListSize);
+      for(i = 1; i < (NeighborListSize); i++) {
+           if(NeighborList[i] > 0){
+                dbg(NEIGHBOR_CHANNEL, "%d -> %d\n", TOS_NODE_ID, i);
+                cnt++;
+           }
       }
-      else {
-        for (i = 0; i < length; i++){
-          beingPrinted = call NeighborsList.get(i);
-          dbg(NEIGHBOR_CHANNEL, "Neighbor found at %d\n", beingPrinted.Node, i);
-          }
-}
+      if(cnt == 0)
+            dbg(GENERAL_CHANNEL, "Neighbor List is Empty\n");
 
    }
 
-    event void CommandHandler.printRouteTable(){}
+    event void CommandHandler.printRouteTable(){
+
+      int i;
+      dbg(GENERAL_CHANNEL, "\t%d's Routing Table\n", TOS_NODE_ID);
+      dbg(GENERAL_CHANNEL, "\tDest\tCost\tCount\n");
+      for (i = 1; i < 20; i++) {
+              dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", Routing[i][0], Routing[i][1], Routing[i][2]);
+      }
+
+    }
 
     event void CommandHandler.printLinkState(){}
 
@@ -386,7 +393,27 @@ implementation{
             Package->seq = seq;
             Package->protocol = protocol;
             memcpy(Package->payload, payload, length);
+    }
+
+    bool findPack(pack *Package) {      //findpack function
+        uint16_t size = call PackList.size();     //get size of the list
+        pack Match;                 //create variable to test for matches
+        uint16_t i = 0;             //initialize variable to 0
+        for (i = 0; i < size; i++) {
+            Match = call PackList.get(i);     //iterate through the list to test for matches
+            if((Match.src == Package->src) && (Match.dest == Package->dest) && (Match.seq == Package->seq)) {   //Check for matches of source, destination, and sequence number
+                return TRUE;
+                }
+            }
+            return FALSE;
         }
+
+    void pushPack(pack Package) {   //pushpack function
+        if (call PackList.isFull()) {
+            call PackList.popfront();         //if the list is full, pop off the front
+        }
+        call PackList.pushback(Package);      //continue adding packages to the list
+    }
 
     void discoverNeighbors(){
 
@@ -422,247 +449,47 @@ implementation{
 
     }
 
-    bool findPack(pack *Package) {      //findpack function
-        uint16_t size = call PackList.size();     //get size of the list
-        pack Match;                 //create variable to test for matches
-        uint16_t i = 0;             //initialize variable to 0
-        for (i = 0; i < size; i++) {
-            Match = call PackList.get(i);     //iterate through the list to test for matches
-            if((Match.src == Package->src) && (Match.dest == Package->dest) && (Match.seq == Package->seq)) {   //Check for matches of source, destination, and sequence number
-                return TRUE;
-                }
-            }
-            return FALSE;
+    void initializeRT() {
+        int i, j, neighbor;
+        bool contains;
+        dbg(ROUTING_CHANNEL, "\tMOTE(%d) Initializing Routing Table\n");
+
+        // Setting all the Nodes in our pool/routing table to  MAX_HOP and setting their nextHop to our emlpty first cell
+        for(i = 1; i < 20; i++) {
+                Routing[i][0] = i;
+                Routing[i][1] = 255;
+                Routing[i][2] = 0;
         }
 
-    void pushPack(pack Package) {   //pushpack function
-        if (call PackList.isFull()) {
-            call PackList.popfront();         //if the list is full, pop off the front
-        }
-        call PackList.pushback(Package);      //continue adding packages to the list
-    }
+        // Setting the cost for SELF
+        Routing[TOS_NODE_ID][0] = TOS_NODE_ID;
+        Routing[TOS_NODE_ID][1] = 0;
+        Routing[TOS_NODE_ID][2] = TOS_NODE_ID;
 
-    void printLSP()
-    {
-       LinkState temp;
-       uint16_t i, j;
-       for(i=0; i < call RoutingTable.size(); i++)
-     {
-       temp = call RoutingTable.get(i);
-       dbg(GENERAL_CHANNEL, "LSP from %d, Cost: %d, Next: %d, Seq: %d, Count; %d\n", temp.Dest, temp.Cost, temp.Next, temp.Seq, temp.NeighborsLength);
-       for(j=0; j<temp.NeighborsLength; j++)
-       {
-         dbg(GENERAL_CHANNEL, "Neighbor at %d\n", temp.Neighbors[j]);
-       }
-     }
-     dbg(GENERAL_CHANNEL, "size is %d\n", call RoutingTable.size());
+        // Setting the cost to all my neighbors
+        for(j = 1; j < NeighborListSize; j++) {
+                 if(NeighborList[j] > 0)
+                      insert(j, 1, j);
+        }
+        /* dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~initialize\n", TOS_NODE_ID);
+        signal CommandHandler.printNeighbors(); */
    }
 
-   void floodLSP(){ //Run to flood LSPs, sending info of this node's direct neighbors
-		pack LSP;
-		LinkState O;
-		dbg(ROUTING_CHANNEL, "LSP Initial Flood from %d\n", TOS_NODE_ID);
-		if (!call NeighborsList.isEmpty()){ //Check to see if there are any neighbors
-			uint16_t i = 0;
-			uint16_t length = call NeighborsList.size();
-			uint16_t directNeighbors[length+1];
-			Neighbor temp;
-		dbg(ROUTING_CHANNEL, "length = %d/n", length);
-			for (i = 0; i < length; i++) { //Push neighbors into the array
-				temp = call NeighborsList.get(i);
-				directNeighbors[i] = temp.Node;
-			}
-			directNeighbors[length] = 0;
-			directNeighbors[length+1] = TOS_NODE_ID;
-			dbg(ROUTING_CHANNEL, "this should be 0: %d\n", directNeighbors[length]);
-			//Flood the packet
-			makePack(&LSP, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL-1, PROTOCOL_LINKSTATE, sequenceCounter++, (uint16_t*)directNeighbors, (uint16_t) sizeof(directNeighbors));
-			pushPack(LSP);
-			call Sender.send(LSP, AM_BROADCAST_ADDR);
-		}
-	}
+   void insertRT(uint8_t dest, uint8_t cost, uint8_t nextHop) {
+        //input data into tuple
+        routing[dest][0] = dest;
+        routing[dest][1] = cost;
+        routing[dest][2] = nextHop;
+  }
 
-  void findNext()
-	{
-		uint16_t i,j,k,CC;
-		uint16_t tablesize,tentsize;
-		LinkState LSP, LSP2;
-		bool popped = FALSE;
-		tablesize = call RoutingTable.size();
-		tentsize = call TentativeTable.size();
-		//Adds LSPs on routing table to TentativeTable based on cost
-		i=0;
-		while (tentsize != tablesize)
-		{
-			LSP = call RoutingTable.get(i);
+    void sendRT() {
+      int i;
+      for (i = 1; i < NeighborListSize; i++)
+      if(NeighborList[i] > 0)
+      splitHorizon((uint8_t)i);
+    }
 
-		}
-		//Check the TentativeTables
-		i=0;
-		while(!call TentativeTable.isEmpty())
-		{
-			k=0;
-			LSP = call TentativeTable.get(i);
-			LSP2 = call TentativeTable.get(k);
-			CC = LSP.Cost;
-			popped = FALSE;
-			//Check to see if neighbors is TOS_NODE_ID
-			for(j = 0; j < LSP.NeighborsLength; j++)
-			{
-				if(LSP.Neighbors[j] == TOS_NODE_ID)
-				{
-					LSP.Next = LSP.Dest;
-					call ConfirmedTable.pushfront(LSP);
-					call TentativeTable.popfront();
-					popped = TRUE;
-					break;
-				}
-			}
-			if(popped = FALSE)
-			{
-				for(j=0; j<LSP.NeighborsLength; j++)
-				{
-					while(LSP2.Dest != LSP.Neighbors[j] && k < tablesize)
-					{
-						k++;
-						LSP2 = call TentativeTable.get(k);
-					}
 
-				}
-			}
-		}
-	}
-
-  void route()
-	{
-		int nodesize[20];
-		int size = call RoutingTable.size();
-		int mn = 20;
-		int i,j,nexthop,cost[mn][mn],distance[mn],plist[mn];
-		int visited[mn],ncount,mindistance,nextnode;
-
-		int start_node = TOS_NODE_ID;
-		bool aMatrix[mn][mn];
-
-		LinkState temp, temp2;
-
-		for(i = 0; i < mn; i++)
-		{
-			for(j = 0; j < mn; j++)
-			{
-				aMatrix[i][j] = FALSE;
-			}
-		}
-
-		for(i = 0; i < size; i++)
-		{
-			temp = call RoutingTable.get(i);
-			for(j = 0; j < temp.NeighborsLength; j++)
-			{
-				aMatrix[temp.Dest][temp.Neighbors[j]] = TRUE;
-			}
-		}
-
-		for(i = 0; i < mn; i++)
-		{
-			for(j = 0; j < mn; j++)
-			{
-				if(aMatrix[i][j] == FALSE)
-				{
-					cost[i][j] = INFINITY;
-				}
-				else
-				{
-					cost[i][j] = 1;
-				}
-			}
-		}
-		if(TOS_NODE_ID == 1){
-		for(i = 0; i < mn; i++)
-		{
-			for(j = 0; j < mn; j++)
-			{
-				//printf("i=%d, j=%d, cost=%d\n", i, j, cost[i][j]);
-			}
-		}
-		}
-
-		for(i = 0; i < mn; i++)
-		{
-			distance[i] = cost[start_node][i];
-			plist[i] = start_node;
-			visited[i] = 0;
-		}
-
-		distance[start_node] = 0;
-		visited[start_node] = 1;
-		ncount = 1;
-
-		while(ncount < mn - 1)
-		{
-			mindistance = INFINITY;
-			for(i = 0; i < mn; i++)
-			{
-				if(distance[i] <= mindistance && visited[i] == 0)
-				{
-					mindistance = distance[i];
-					nextnode = i;
-				}
-			}
-			visited[nextnode] = 1;
-			for(i = 0; i < mn; i++)
-			{
-				if(visited[i] == 0)
-				{
-					if(mindistance + cost[nextnode][i] < distance[i])
-					{
-						distance[i] = mindistance + cost[nextnode][i];
-						plist[i] = nextnode;
-					}
-				}
-			}
-			ncount++;
-		}
-
-		for(i = 0; i < mn; i++)
-		{
-			nexthop = TOS_NODE_ID;
-			if(distance[i] != INFINITY)
-			{
-				if(i != start_node)
-				{
-					j = i;
-					do {
-						if(j != start_node)
-						{
-							nexthop = j;
-						}
-						j = plist[j];
-					} while(j != start_node);
-				}
-				else
-				{
-					nexthop = start_node;
-				}
-				if(nexthop != 0)
-				{
-					call nextTable.insert(i, nexthop);
-				}
-			}
-		}
-		if(call ConfirmedTable.isEmpty())
-		{
-			for(i = 1; i <= 20; i++)
-			{
-				temp2.Dest = i;
-				temp2.Cost = cost[TOS_NODE_ID][i];
-				temp2.Next = call nextTable.get(i);
-				call ConfirmedTable.pushfront(temp2);
-				//dbg(GENERAL_CHANNEL, "confirmed size: %d\n", call Confirmed.size());
-			}
-		}
-
-	}
 
 /*
   void route(uint16_t Dest, uint16_t Cost, uint16_t Next) {
