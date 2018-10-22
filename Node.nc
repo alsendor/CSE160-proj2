@@ -79,6 +79,7 @@ implementation{
     void splitHorizon(unit8_t nextHop);
     void sendTable();
 
+    //Period timer function
     event void periodTimer.fired() {
        scanForNeighbors();
        unit8_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
@@ -95,6 +96,7 @@ implementation{
        }
      }
 
+    //Table timer function
      event void tableTimer.fired() {
        if (initialized == FALSE) {
          initialize();
@@ -131,6 +133,28 @@ implementation{
       bool diffRoute = FALSE;
       pack *recievedMsg;
       recievedMsg = (pack *)payload;
+
+      if (recievedMsg->protocol == PROTOCOL_DV) {     //Recieve DV message
+        dbg(GENERAL_CHANNEL, "Recieved DV Packet\n")
+      }
+
+      //Timer ran out of time to live and has died
+      if (len == sizeof(pack)) {
+        if (recievedMsg->TTL = 0){
+          dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) TTL ran out\n", recievedMsg->src, recievedMsg->dest);
+          return msg;
+        }
+      }
+
+      //If packet has been seen
+      else if (packSeen(recievedMsg)) {
+        return msg;
+      }
+
+      //Ping and ping reply
+      if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == TOS_NODE_ID) {
+        
+      }
 
     else if(myMsg->dest == AM_BROADCAST_ADDR) { //check if looking for neighbors
 
