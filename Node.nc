@@ -13,11 +13,11 @@
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
 
-typedef nx_struct Neighbor {
+/*typedef nx_struct Neighbor {
    nx_uint16_t Node;
    nx_uint16_t pingNumber;
 }Neighbor;
-
+*/
 module Node{
 
     uses interface Boot;
