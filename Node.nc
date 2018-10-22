@@ -537,14 +537,71 @@ implementation{
         Routing[dest][2] = nextHop;
   }
 
-    void sendRT() {
+  void sendRT() {
       int i;
       for (i = 1; i < NeighborsSize; i++)
       if(Neighbors[i] > 0)
       splitHorizon((uint8_t)i);
+  }
+
+  bool mergeRoute(unit8_t *newRoute, unit8_t src) {
+
+    int node, cost, next, i, j;
+    bool alteredRoute = false;
+
+    for (i = 0; i < 20; i++) {
+        for (j = 0; j < 7; j++) {
+            // Saving values for cleaner Code
+            node = *(newRoute + (j * 3));
+            cost = *(newRoute + (j * 3) + 1);
+            next = *(newRoute + (j * 3) + 2);
+
+            if (node == routing[i][0]) {
+                    if ((cost+1)<routing[i][1]) {
+                            Routing[i][0] = node;
+                            Routing[i][1] = cost + 1;
+                            Routing[i][2] = src;
+
+                            alteredRoute = TRUE;
+                    }
+            }
+        }
     }
 
+    return alteredRoute;
 
+  }
+
+  void splitHorizon(unit8_t nextHop) {
+
+    int i, j;
+
+    //The below values will keep track of the first node
+    uint8_t* start;
+    uint8_t* poisonTable = NULL;
+    poisonTable = malloc(sizeof(Routing));
+    start = malloc(sizeof(Routing));
+
+    //Using memcpy to copy routing table information
+    memcpy(poisonTable, &Routing, sizeof(Routing));
+    start = poisonTable;
+
+    //Poison Control Implementation: make the path cost the max hop at the moment
+    for(i = 0; i < 20; i++)
+      if (nextHop == i)
+        *(poisonTable + (i*3) + 1) = 25;
+
+    //Semd the payload into seperate parts
+    for(i = 0; i < 20; i++) {
+      if(i % 7 == 0){
+          nodeSeq++;
+          makePack(&sendPackage, TOS_NODE_ID, nextHop, 2, PROTOCOL_DV, nodeSeq, poisonTabel, sizeof(Routing));
+          call Sender.send(sendPackage, nextHop);
+      }
+        poisonTable += 3;
+     }
+
+  }
 
 /*
   void route(uint16_t Dest, uint16_t Cost, uint16_t Next) {
