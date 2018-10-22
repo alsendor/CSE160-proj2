@@ -44,12 +44,8 @@ module Node{
 
 implementation{
 
-<<<<<<< HEAD
     uint16_t sequenceCounter = 0;             //Create a sequence counter
   //uint16_t accessCounter = 0;               //Create an access counter
-=======
-    uint16_t sequenceCounter = 0;
->>>>>>> 9f54f58207742e451fe290bbc76f6f7c3be37c4c
     uint8_t maxHops = 18;
     uint8_t NeighborsListSize = 19;
     uint8_t maxNeighborTTL = 20;
@@ -202,12 +198,7 @@ implementation{
     dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) is Corrupted", recievedMsg->src, recievedMsg->dest);
     return msg;
   }
-<<<<<<< HEAD
-  event void CommandHandler.ping(unit16_t destination, uint8_t *payload){
-=======
-
   event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
->>>>>>> 9f54f58207742e451fe290bbc76f6f7c3be37c4c
     sequenceCounter++;
     makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL + 5, PROTOCOL_PING, sequenceCounter, payload, PACKET_MAX_PAYLOAD_SIZE);
     packLog(&sendPackage);
