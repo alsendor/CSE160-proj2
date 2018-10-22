@@ -59,8 +59,8 @@ implementation{
     void discoverNeighbors();
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
-    void pushPack(pack Package);           //Function to create a log of packs
-    bool findPack(pack *Package);            //Function to check for previously seen packs
+    void packLog(pack Package);           //Function to create a log of packs
+    bool packSeen(pack *Package);            //Function to check for previously seen packs
 
     //void route(uint16_t Dest, uint16_t Cost, uint16_t Next);
 
@@ -398,6 +398,8 @@ implementation{
     call Sender.send(sendPackage, AM_BROADCAST_ADDR);
     }
 */
+
+    //Printing functions
     event void CommandHandler.printNeighbors(){
 
       int i, cnt = 0;
@@ -446,7 +448,36 @@ implementation{
             memcpy(Package->payload, payload, length);
     }
 
-    bool findPack(pack *Package) {      //findpack function
+    void packLog(pack *payload) {
+      pack loggedP;
+      unit16_t src = payload->src;
+      unit16_t seq = payload->seq;
+      //Test if list contains the src key & check if its empty
+      if (call PackList.size() == 64) {
+        call PackList.popfront();
+      }
+      makePack(&packLog, payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq, (unit8_t*) payload->payload, sizeof(pack));
+      call PackList.pushback(loggedP);
+
+    }
+
+    bool packSeen(pack *packet) {
+      pack store;
+      int x, size;
+      size = call PackList.size();
+
+      if(size > 0) {
+        for (x = 0; x < size; x++) {
+          store = call PackList.get(x);
+          if (store.src == packet->src && store.seq == packet->seq) {
+            return 1;
+          }
+        }
+      }
+      return 0;
+    }
+
+  /*  bool findPack(pack *Package) {      //findpack function
         uint16_t size = call PackList.size();     //get size of the list
         pack Match;                 //create variable to test for matches
         uint16_t i = 0;             //initialize variable to 0
@@ -465,6 +496,7 @@ implementation{
         }
         call PackList.pushback(Package);      //continue adding packages to the list
     }
+*/
 
 //Neighbor Discovery
 
