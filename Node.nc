@@ -102,6 +102,8 @@ implementation{
        if (initialized == FALSE) {
          initializeRT();
          initialized = TRUE;
+         signal CommandHandler.printNeighbors();
+         signal CommandHandler.printRouteTable();
        }
        else {
          sendRT();
@@ -417,7 +419,7 @@ implementation{
             dbg(GENERAL_CHANNEL, "Neighbor List is Empty\n");
 
    }
-
+   //Print Routing Table
     event void CommandHandler.printRouteTable(){
 
       int i;
