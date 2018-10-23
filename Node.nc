@@ -141,7 +141,7 @@ implementation{
 
       //Timer ran out of time to live and has died
       if (len == sizeof(pack)) {
-        if (recievedMsg->TTL == 0){
+        if (recievedMsg->TTL = 0){
           dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) TTL ran out\n", recievedMsg->src, recievedMsg->dest);
           return msg;
         }
@@ -404,8 +404,8 @@ implementation{
     event void CommandHandler.printNeighbors(){
 
       int i, cnt = 0;
-      dbg(GENERAL_CHANNEL, "Neighbors Size: %d\n", NeighborsSize);
-      for(i = 1; i < (NeighborsSize); i++) {
+      dbg(GENERAL_CHANNEL, "Neighbors Size: %d\n", NeighborsListSize);
+      for(i = 1; i < (NeighborsListSize); i++) {
            if(Neighbors[i] > 0){
                 dbg(NEIGHBOR_CHANNEL, "%d -> %d\n", TOS_NODE_ID, i);
                 cnt++;
@@ -509,7 +509,7 @@ implementation{
 
     void lessNeighborTTL() {
       int i;
-      for (i = 0; i < NeighborsSize; i++) {
+      for (i = 0; i < NeighborsListSize; i++) {
             if(Neighbors[i] == 1) {
                   Neighbors[i] -= 1;
                   Routing[i][1] = 255;
@@ -606,7 +606,7 @@ implementation{
         Routing[TOS_NODE_ID][2] = TOS_NODE_ID;
 
         // Setting the cost to all my neighbors
-        for(j = 1; j < NeighborsSize; j++) {
+        for(j = 1; j < NeighborsListSize; j++) {
                  if(Neighbors[j] > 0)
                       insert(j, 1, j);
         }
@@ -623,7 +623,7 @@ implementation{
 
   void sendRT() {
       int i;
-      for (i = 1; i < NeighborsSize; i++)
+      for (i = 1; i < NeighborsListSize; i++)
       if(Neighbors[i] > 0)
       splitHorizon((uint8_t)i);
   }
