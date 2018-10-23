@@ -148,58 +148,58 @@ implementation{
           return msg;
         }
 
-      //If packet has been seen
-      else if (packSeen(recievedMsg)) {
-        return msg;
-      }
-
-      //Ping and ping reply
-      if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == TOS_NODE_ID) {
-        dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) ------------------------------------------------------>>>>Ping: %s\n", recievedMsg->src, recievedMsg->dest, recievedMsg->payload);
-        packLog(&sendPackage);
-
-        //sending reply
-        sequenceCounter++;
-        makePack(&sendPackage, recievedMsg->dest, recievedMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequenceCounter, (uint8_t*)recievedMsg->payload, len);
-        packLog(&sendPackage);
-        call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-
-        signal CommandHandler.printRouteTable();
-        return msg;
-      }
-      //Ping Reply
-      else if (recievedMsg->protocol == PROTOCOL_PINGREPLY && recievedMsg->dest == TOS_NODE_ID) {
-        dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) ------------------------------------------------------>>>>Ping Reply: %s\n", recievedMsg->src, recievedMsg->dest, recievedMsg->payload);
-        packLog(&sendPackage);
-        return msg;
-      }
-      //Neighbor discovery timer
-      else if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == AM_BROADCAST_ADDR) {
-        dbg(GENERAL_CHANNEL, "Neighbor Discovery Packet Source: %d\n", recievedMsg->src);
-        addNeighbor(recievedMsg->src);
-        packLog(recievedMsg);
-        return msg;
-      }
-      //Receive DV table
-      else if (recievedMsg->dest == TOS_NODE_ID && recievedMsg->protocol == PROTOCOL_DV) {
-        dbg(GENERAL_CHANNEL, "Calling Merge Route\n");
-        diffRoute = mergeRoute((uint8_t*) recievedMsg->payload, (uint8_t) recievedMsg->src);
-        signal CommandHandler.printRouteTable();
-        if(diffRoute){
-          sendRT();
+        //If packet has been seen
+        else if (packSeen(recievedMsg)) {
+          return msg;
         }
+
+        //Ping and ping reply
+        if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == TOS_NODE_ID) {
+          dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) ------------------------------------------------------>>>>Ping: %s\n", recievedMsg->src, recievedMsg->dest, recievedMsg->payload);
+          packLog(&sendPackage);
+
+          //sending reply
+          sequenceCounter++;
+          makePack(&sendPackage, recievedMsg->dest, recievedMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequenceCounter, (uint8_t*)recievedMsg->payload, len);
+          packLog(&sendPackage);
+          call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+
+          signal CommandHandler.printRouteTable();
+          return msg;
+        }
+        //Ping Reply
+        else if (recievedMsg->protocol == PROTOCOL_PINGREPLY && recievedMsg->dest == TOS_NODE_ID) {
+          dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) ------------------------------------------------------>>>>Ping Reply: %s\n", recievedMsg->src, recievedMsg->dest, recievedMsg->payload);
+          packLog(&sendPackage);
+          return msg;
+        }
+        //Neighbor discovery timer
+        else if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == AM_BROADCAST_ADDR) {
+          dbg(GENERAL_CHANNEL, "Neighbor Discovery Packet Source: %d\n", recievedMsg->src);
+          addNeighbor(recievedMsg->src);
+          packLog(recievedMsg);
+          return msg;
+        }
+        //Receive DV table
+        else if (recievedMsg->dest == TOS_NODE_ID && recievedMsg->protocol == PROTOCOL_DV) {
+          dbg(GENERAL_CHANNEL, "Calling Merge Route\n");
+          diffRoute = mergeRoute((uint8_t*) recievedMsg->payload, (uint8_t) recievedMsg->src);
+          signal CommandHandler.printRouteTable();
+          if(diffRoute){
+            sendRT();
+          }
+          return msg;
+        }
+        //If packet is not at intended destination
+        else if (recievedMsg->dest != TOS_NODE_ID && recievedMsg->dest != AM_BROADCAST_ADDR) {
+          recievedMsg->TTL--;
+          makePack(&sendPackage, recievedMsg->src, recievedMsg->dest, recievedMsg->TTL, recievedMsg->protocol, recievedMsg->seq, (uint8_t*)recievedMsg->payload, len);
+          packLog(&sendPackage);
+          sendToNeighbor(&sendPackage);
+          return msg;
+        }
+        dbg(GENERAL_CHANNEL, "\tUnknown Packet Type %d\n", len);
         return msg;
-      }
-      //If packet is not at intended destination
-      else if (recievedMsg->dest != TOS_NODE_ID && recievedMsg->dest != AM_BROADCAST_ADDR) {
-        recievedMsg->TTL--;
-        makePack(&sendPackage, recievedMsg->src, recievedMsg->dest, recievedMsg->TTL, recievedMsg->protocol, recievedMsg->seq, (uint8_t*)recievedMsg->payload, len);
-        packLog(&sendPackage);
-        sendToNeighbor(&sendPackage);
-        return msg;
-      }
-      dbg(GENERAL_CHANNEL, "\tUnknown Packet Type %d\n", len);
-      return msg;
     }
     dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) is Corrupted", recievedMsg->src, recievedMsg->dest);
     return msg;
