@@ -141,7 +141,7 @@ implementation{
 
       //Timer ran out of time to live and has died
       if (len == sizeof(pack)) {
-        if (recievedMsg->TTL = 0){
+        if (recievedMsg->TTL == 0){
           dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) TTL ran out\n", recievedMsg->src, recievedMsg->dest);
           return msg;
         }
