@@ -636,7 +636,7 @@ implementation{
   bool mergeRoute(uint8_t *newRoute, uint8_t src) {
 
     int node, cost, next, i, j;
-    bool alteredRoute = FALSE;
+    bool diffRoute = FALSE;
 
     for (i = 0; i < 20; i++) {
         for (j = 0; j < 7; j++) {
@@ -651,14 +651,14 @@ implementation{
                             Routing[i][1] = cost + 1;
                             Routing[i][2] = src;
 
-                            alteredRoute = TRUE;
+                            diffRoute = TRUE;
                     }
             }
             signal CommandHandler.printRouteTable();
         }
     }
 
-    return alteredRoute;
+    return diffRoute;
 
   }
 
