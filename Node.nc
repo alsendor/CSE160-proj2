@@ -641,7 +641,7 @@ implementation{
             next = *(newRoute + (j * 3) + 2);
 
             if (node == Routing[i][0]) {
-                    if ((cost+1)<routing[i][1]) {
+                    if ((cost+1)<Routing[i][1]) {
                             Routing[i][0] = node;
                             Routing[i][1] = cost + 1;
                             Routing[i][2] = src;
