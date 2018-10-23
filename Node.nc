@@ -70,7 +70,7 @@ implementation{
     void route();
     void addNeighbor(uint8_t Neighbor);
     void lessNeighborTTL();
-    void sendToNeighbor(pack *recievedMsg)
+    void sendToNeighbor(pack *recievedMsg);
     void destNeighbor(pack *recievedMsg);
     void scanForNeighbors();
 
@@ -198,7 +198,8 @@ implementation{
     }
     dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) is Corrupted", recievedMsg->src, recievedMsg->dest);
     return msg;
-  }
+}
+
   event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
     sequenceCounter++;
     makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL + 5, PROTOCOL_PING, sequenceCounter, payload, PACKET_MAX_PAYLOAD_SIZE);
