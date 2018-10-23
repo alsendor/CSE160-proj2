@@ -161,6 +161,8 @@ implementation{
         makePack(&sendPackage, recievedMsg->dest, recievedMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequenceCounter, (uint8_t*)recievedMsg->payload, len);
         packLog(&sendPackage);
         call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+
+        signal CommandHandler.printRouteTable();
         return msg;
       }
       //Ping Reply
