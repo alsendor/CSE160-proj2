@@ -83,9 +83,8 @@ implementation{
 
     //Period timer function
     event void Timer.fired() {
+       uint32_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
        scanForNeighbors();
-       uint8_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
-
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
 
