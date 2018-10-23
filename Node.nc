@@ -462,6 +462,7 @@ implementation{
       if (call PackList.size() == 64) {
         call PackList.popfront();
       }
+      dbg (GENERAL_CHANNEL, "Payload: src: %d, dest: %d, TTL: %d, sec: %d ", payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq);
       makePack(&loggedP, payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq, (uint8_t*) payload->payload, sizeof(pack));
       call PackList.pushback(loggedP);
 
