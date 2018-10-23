@@ -451,7 +451,7 @@ implementation{
             Package->TTL = TTL;
             Package->seq = seq;
             Package->protocol = protocol;
-            dbg (GENERAL_CHANNEL, "makePack: Payload: src: %d, dest: %d, TTL: %d, seq: %d ", payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq);
+            dbg (GENERAL_CHANNEL, "makePack: Package: src: %d, dest: %d, TTL: %d, seq: %d ", Package->src, Package->dest, Package->TTL, Package->protocol, Package->seq);
             memcpy(Package->payload, payload, length);
     }
 
