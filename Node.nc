@@ -55,7 +55,7 @@ implementation{
     uint8_t Routing[255][3];
 
     pack sendPackage;
-    bool fired = FALSE;
+    bool isFired = FALSE;
     bool initialized = FALSE;
 
     void discoverNeighbors();
@@ -92,9 +92,9 @@ implementation{
        Tinitial = 20000 + (call Random.rand32() % 1000);
        Tinterval = 25000 + (call Random.rand32() % 10000);
 
-       if (!fired) {
+       if (!isFired) {
          call tableTimer.startPeriodic(Tinitial, Tinterval);
-         fired = TRUE;
+         isFired = TRUE;
        }
      }
 
