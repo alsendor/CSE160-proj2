@@ -516,8 +516,8 @@ implementation{
                   dbg (NEIGHBOR_CHANNEL, "\t Node %d Dropped from the Network \n", i);
 
                   // NeighborPing to neighbor we are dropppping
-                  nodeSeq++;
-                  makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, nodeSeq, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
+                  sequenceCounter++;
+                  makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, sequenceCounter, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
                   call Sender.send(sendPackage, (uint8_t) i);
             }
             if (Neighbors[i] > 1) {
@@ -545,8 +545,8 @@ implementation{
     void scanForNeighbors(){
       int i;
       if (!initialized) {
-             nodeSeq++;
-             makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, nodeSeq, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
+             sequenceCounter++;
+             makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, sequenceCounter, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
              call Sender.send(sendPackage, AM_BROADCAST_ADDR);
       } else  {
              reduceNeighborsTTL();
@@ -678,8 +678,8 @@ implementation{
     //Semd the payload into seperate parts
     for(i = 0; i < 20; i++) {
       if(i % 7 == 0){
-          nodeSeq++;
-          makePack(&sendPackage, TOS_NODE_ID, nextHop, 2, PROTOCOL_DV, nodeSeq, poisonTabel, sizeof(Routing));
+          sequenceCounter++;
+          makePack(&sendPackage, TOS_NODE_ID, nextHop, 2, PROTOCOL_DV, sequenceCounter, poisonTabel, sizeof(Routing));
           call Sender.send(sendPackage, nextHop);
       }
         poisonTable += 3;
