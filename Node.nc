@@ -457,7 +457,7 @@ implementation{
       if (call PackList.size() == 64) {
         call PackList.popfront();
       }
-      makePack(&packLog, payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq, (uint8_t*) payload->payload, sizeof(pack));
+      makePack(&loggedP, payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq, (uint8_t*) payload->payload, sizeof(pack));
       call PackList.pushback(loggedP);
 
     }
@@ -504,7 +504,7 @@ implementation{
     void addNeighbor(uint8_t Neighbor) {
       if(Neighbor == 0)
           dbg(GENERAL_CHANNEL, "This is the neighbor at Source 0");
-       Neighbors[Neighbor] = MAX_NEIGHBOR_TTL;
+       Neighbors[Neighbor] = maxNeighborTTL;
     }
 
     void lessNeighborTTL() {
