@@ -451,7 +451,7 @@ implementation{
             Package->TTL = TTL;
             Package->seq = seq;
             Package->protocol = protocol;
-            dbg (GENERAL_CHANNEL, "makePack: Package: src: %d, dest: %d, TTL: %d, seq: %d ", Package->src, Package->dest, Package->TTL, Package->protocol, Package->seq);
+            dbg (GENERAL_CHANNEL, "makePack: Package: src: %d, dest: %d, TTL: %d, seq: %d \n", Package->src, Package->dest, Package->TTL, Package->protocol, Package->seq);
             memcpy(Package->payload, payload, length);
     }
 
@@ -463,7 +463,7 @@ implementation{
       if (call PackList.size() == 64) {
         call PackList.popfront();
       }
-      dbg (GENERAL_CHANNEL, "Pack Log: Payload: src: %d, dest: %d, TTL: %d, seq: %d ", payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq);
+      dbg (GENERAL_CHANNEL, "Pack Log: Payload: src: %d, dest: %d, TTL: %d, seq: %d \n", payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq);
       makePack(&loggedP, payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq, (uint8_t*) payload->payload, sizeof(pack));
       call PackList.pushback(loggedP);
 
@@ -478,7 +478,7 @@ implementation{
         for (x = 0; x < size; x++) {
           store = call PackList.get(x);
           if (store.src == packet->src && store.seq == packet->seq) {
-            dbg (GENERAL_CHANNEL, "PACKSEEN: src: %d, seq: %d", packet->src, packet->seq);
+            dbg (GENERAL_CHANNEL, "PACKSEEN: src: %d, seq: %d \n", packet->src, packet->seq);
             return 1;
           }
         }
@@ -552,7 +552,7 @@ implementation{
 
     void scanForNeighbors(){
       int i;
-      dbg(NEIGHBOR_CHANNEL, "Currently Scanning for Neighbors");
+      dbg(NEIGHBOR_CHANNEL, "Currently Scanning for Neighbors\n");
       if (!initialized) {
              sequenceCounter++;
              makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, sequenceCounter, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
@@ -628,7 +628,7 @@ implementation{
         Routing[dest][0] = dest;
         Routing[dest][1] = cost;
         Routing[dest][2] = nextHop;
-        dbg(ROUTING_CHANNEL, "Inserting into Routing Table dest: %d, cost: %d, next: %d", dest, cost, nextHop);
+        dbg(ROUTING_CHANNEL, "Inserting into Routing Table dest: %d, cost: %d, next: %d \n", dest, cost, nextHop);
   }
 
   void sendRT() {
