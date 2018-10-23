@@ -92,7 +92,7 @@ implementation{
        Tinterval = 25000 + (call Random.rand32() % 10000);
 
        if (!isFired) {
-         call tableTimer.startPeriodic(Tinitial, Tinterval);
+         call tableTimer.startPeriodicAt(Tinitial, Tinterval);
          isFired = TRUE;
        }
      }
