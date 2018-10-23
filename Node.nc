@@ -478,6 +478,7 @@ implementation{
         for (x = 0; x < size; x++) {
           store = call PackList.get(x);
           if (store.src == packet->src && store.seq == packet->seq) {
+            dbg (GENERAL_CHANNEL, "PACKSEEN: src: %d, seq: %d", packet->src, packet->seq);
             return 1;
           }
         }
@@ -551,6 +552,7 @@ implementation{
 
     void scanForNeighbors(){
       int i;
+      dbg(NEIGHBOR_CHANNEL, "Currently Scanning for Neighbors");
       if (!initialized) {
              sequenceCounter++;
              makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, sequenceCounter, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
@@ -626,13 +628,14 @@ implementation{
         Routing[dest][0] = dest;
         Routing[dest][1] = cost;
         Routing[dest][2] = nextHop;
+        dbg(ROUTING_CHANNEL, "Inserting into Routing Table dest: %d, cost: %d, next: %d", dest, cost, nextHop);
   }
 
   void sendRT() {
       int i;
       for (i = 1; i < NeighborsListSize; i++)
-      if(Neighbors[i] > 0)
-      splitHorizon((uint8_t)i);
+        if(Neighbors[i] > 0)
+          splitHorizon((uint8_t)i);
   }
 
   bool mergeRoute(uint8_t *newRoute, uint8_t src) {
