@@ -92,7 +92,7 @@ implementation{
        Tinterval = 25000 + (call Random.rand32() % 10000);
 
        if (!isFired) {
-         call tableTimer.startPeriodicAt(Tinitial, Tinterval);
+         call tableTimer.startPeriodic(Tinitial, Tinterval);
          isFired = TRUE;
        }
      }
@@ -100,7 +100,7 @@ implementation{
     //Table timer function
      event void tableTimer.fired() {
        if (initialized == FALSE) {
-         initialize();
+         initializeRT();
          initialized = TRUE;
        }
        else {
@@ -114,7 +114,7 @@ implementation{
 
     Tinitial = 500 + (call Random.rand32() % 1000);
     Tinterval = 2500 + (call Random.rand32() % 10000);
-    call periodTimer.startPeriodicAt(Tinitial, Tinterval);
+    call periodTimer.startPeriodic(Tinitial, Tinterval);
 
     dbg(GENERAL_CHANNEL, "Booted\n");
   }
