@@ -549,7 +549,7 @@ implementation{
              makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, sequenceCounter, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
              call Sender.send(sendPackage, AM_BROADCAST_ADDR);
       } else  {
-             reduceNeighborsTTL();
+             lessNeighborTTL();
       }
     }
 
@@ -608,7 +608,7 @@ implementation{
         // Setting the cost to all my neighbors
         for(j = 1; j < NeighborsListSize; j++) {
                  if(Neighbors[j] > 0)
-                      insert(j, 1, j);
+                      insertRT(j, 1, j);
         }
         /* dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~initialize\n", TOS_NODE_ID);
         signal CommandHandler.printNeighbors(); */
@@ -631,7 +631,7 @@ implementation{
   bool mergeRoute(uint8_t *newRoute, uint8_t src) {
 
     int node, cost, next, i, j;
-    bool alteredRoute = false;
+    bool alteredRoute = FALSE;
 
     for (i = 0; i < 20; i++) {
         for (j = 0; j < 7; j++) {
