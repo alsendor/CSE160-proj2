@@ -61,7 +61,7 @@ implementation{
     void discoverNeighbors();
     void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
 
-    void packLog(pack Package);           //Function to create a log of packs
+    void packLog(pack *Package);           //Function to create a log of packs
     bool packSeen(pack *Package);            //Function to check for previously seen packs
 
     //void route(uint16_t Dest, uint16_t Cost, uint16_t Next);
@@ -114,7 +114,6 @@ implementation{
 
     Tinitial = 500 + (call Random.rand32() % 1000);
     Tinterval = 2500 + (call Random.rand32() % 10000);
-
     call Timer.startPeriodicAt(Tinitial, Tinterval);
 
     dbg(GENERAL_CHANNEL, "Booted\n");
@@ -142,7 +141,7 @@ implementation{
 
       //Timer ran out of time to live and has died
       if (len == sizeof(pack)) {
-        if (recievedMsg->TTL == 0){
+        if (recievedMsg->TTL = 0){
           dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) TTL ran out\n", recievedMsg->src, recievedMsg->dest);
           return msg;
         }
