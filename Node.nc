@@ -71,7 +71,7 @@ implementation{
     void addNeighbor(uint8_t Neighbor);
     void lessNeighborTTL();
     void sendToNeighbor(pack *recievedMsg);
-    void destNeighbor(pack *recievedMsg);
+    bool destNeighbor(pack *recievedMsg);
     void scanForNeighbors();
 
     //Distance Vector table initialize, insert new, merge route, split horizon, and send table to all neighbors
@@ -527,7 +527,7 @@ implementation{
     }
 
     void sendToNeighbor(pack *recievedMsg) {
-      if(destIsNeighbor(recievedMsg)) {
+      if(destNeighbor(recievedMsg)) {
               dbg(NEIGHBOR_CHANNEL, "\tDeliver to Destination\n");
               call Sender.send(sendPackage, recievedMsg->dest);
         } else {
@@ -536,7 +536,7 @@ implementation{
         }
     }
 
-    void destNeighbor(pack *recievedMsg){
+    bool destNeighbor(pack *recievedMsg){
       if(Neighbors[recievedMsg->dest] > 0)
           return 1;
       return 0;
