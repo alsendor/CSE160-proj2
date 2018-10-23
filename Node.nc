@@ -114,7 +114,11 @@ implementation{
 
     Tinitial = 500 + (call Random.rand32() % 1000);
     Tinterval = 2500 + (call Random.rand32() % 10000);
+<<<<<<< HEAD
     call periodTimer.startPeriodic(Tinitial, Tinterval);
+=======
+    call Timer.startPeriodicAt(Tinitial, Tinterval);
+>>>>>>> 2a71b28d2b352076ff5af6d97d03be655e6f49c1
 
     dbg(GENERAL_CHANNEL, "Booted\n");
   }
