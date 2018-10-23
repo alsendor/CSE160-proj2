@@ -92,7 +92,7 @@ implementation{
        Tinterval = 25000 + (call Random.rand32() % 10000);
 
        if (!isFired) {
-         call tableTimer.startPeriodic(Tinitial, Tinterval);
+         call tableTimer.startPeriodicAt(Tinitial, Tinterval);
          isFired = TRUE;
        }
      }
@@ -114,7 +114,7 @@ implementation{
 
     Tinitial = 500 + (call Random.rand32() % 1000);
     Tinterval = 2500 + (call Random.rand32() % 10000);
-    call periodTimer.startPeriodic(Tinitial, Tinterval);
+    call periodTimer.startPeriodicAt(Tinitial, Tinterval);
 
     dbg(GENERAL_CHANNEL, "Booted\n");
   }
