@@ -640,7 +640,7 @@ implementation{
             cost = *(newRoute + (j * 3) + 1);
             next = *(newRoute + (j * 3) + 2);
 
-            if (node == routing[i][0]) {
+            if (node == Routing[i][0]) {
                     if ((cost+1)<routing[i][1]) {
                             Routing[i][0] = node;
                             Routing[i][1] = cost + 1;
@@ -679,7 +679,7 @@ implementation{
     for(i = 0; i < 20; i++) {
       if(i % 7 == 0){
           sequenceCounter++;
-          makePack(&sendPackage, TOS_NODE_ID, nextHop, 2, PROTOCOL_DV, sequenceCounter, poisonTabel, sizeof(Routing));
+          makePack(&sendPackage, TOS_NODE_ID, nextHop, 2, PROTOCOL_DV, sequenceCounter, poisonTable, sizeof(Routing));
           call Sender.send(sendPackage, nextHop);
       }
         poisonTable += 3;
