@@ -688,7 +688,7 @@ implementation{
   //  signal CommandHandler.printRouteTable();
 
     for (i = 0; i < 20; i++) {
-      if (NeighborsList[i] > 0) {
+      if (Neighbors[i] > 0) {
         if (Routing[i][1] == 255) {
           *(start + (i * 3) + 0) = i;
           *(start + (i * 3) + 1) = i;
