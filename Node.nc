@@ -176,7 +176,7 @@ implementation{
           return msg;
         }
         //Neighbor discovery timer
-        else if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == AM_BROADCAST_ADDR) {
+        else if (recievedMsg->dest == AM_BROADCAST_ADDR) {
           dbg(GENERAL_CHANNEL, "Neighbor Discovery Packet Source: %d\n", recievedMsg->src);
           addNeighbor(recievedMsg->src);
           packLog(recievedMsg);
