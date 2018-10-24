@@ -51,6 +51,9 @@ implementation {
     components new ListC(LinkState, 64) as TentativeC;
     Node.Tentative -> TentativeC;
 
+    components new ListC(LinkState, 64) as TempC;
+    Node.Temp -> TempC;
+
     components RandomC as Random;
     Node.Random -> Random;
 
