@@ -515,6 +515,7 @@ implementation{
       if(Neighbor == 0)
           dbg(GENERAL_CHANNEL, "This is the neighbor at Source 0");
        Neighbors[Neighbor] = maxNeighborTTL;
+       signal CommandHandler.printNeighbors();
     }
 
     void lessNeighborTTL() {
@@ -622,7 +623,7 @@ implementation{
                       insertRT(j, 1, j);
         }
         // dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~initialize\n", TOS_NODE_ID);
-        signal CommandHandler.printNeighbors(); 
+        signal CommandHandler.printNeighbors();
    }
 
    void insertRT(uint8_t dest, uint8_t cost, uint8_t nextHop) {
