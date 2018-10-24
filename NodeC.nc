@@ -45,6 +45,12 @@ implementation {
     components new ListC(LinkState, 64) as RoutingTableC;
     Node.RoutingTable -> RoutingTableC;
 
+    components new ListC(LinkState, 64) as ConfirmedC;
+    Node.Confirmed -> ConfirmedC;
+
+    components new ListC(LinkState, 64) as TentativeC;
+    Node.Tentative -> TentativeC;
+
     components RandomC as Random;
     Node.Random -> Random;
 
