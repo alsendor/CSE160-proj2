@@ -525,7 +525,8 @@ implementation{
 		Neighbor temp2;
 		LinkState temp3;
 		LinkState temp4;
-		uint16_t i,j,k;
+		LinkState minTemp;
+		uint16_t i,j,k,minCost,minInt;
 		uint16_t tentInt;
 		uint16_t* NeighborsArr;
 		bool inTentList;
@@ -551,7 +552,7 @@ implementation{
 			}
 		}
 
-		for (i = 0; i < call Neighbors.size(); i++){
+		for (i = 0; i < temp.NeighborsLength; i++){
 			temp2 = call Neighbors.get(i);
 			for (j = 0; j < call RoutingTable.size(); j++) {
 				inTentList = FALSE;
@@ -560,6 +561,7 @@ implementation{
 				//If this is recursive, what about situations where temp.Dest != TOS_NODE_ID?
 				if (temp2.Node == temp3.Dest && temp.Dest == TOS_NODE_ID) {
 					temp3.Next = temp2.Node;
+
 					if (!call Tentative.isEmpty()) {
 						for (k = 0; k < call Tentative.size(); k++){
 							temp4 = call Tentative.get(k);
@@ -569,6 +571,7 @@ implementation{
 							}
 						}
 					}
+
 					if (!call Confirmed.isEmpty()) {
 						for (k = 0; k < call Confirmed.size(); k++){
 							temp4 = call Confirmed.get(k);
@@ -577,6 +580,7 @@ implementation{
 							}
 						}
 					}
+
 					if (!inTentList && !inConList) {
 						call Tentative.pushfront(temp3);
 					}
@@ -587,41 +591,60 @@ implementation{
 							call Tentative.pushfront(temp3);
 						}
 					}
+
 				}
 
 				//Much like above, how can we be sure that NeighborsArr[j] is the right index we need?
-				if (temp.Dest != TOS_NODE_ID && NeighborsArr[j] == temp3.Dest) {
-					temp3.Next = temp2.Node;
-					if (!call Tentative.isEmpty()) {
-						for (k = 0; k < call Tentative.size(); k++) {
-							temp4 = call Tentative.get(k);
-							if (temp4.Dest == temp3.Dest) {
-								inTentList = TRUE;
-								tentInt = k;
+				else if (temp.Dest != TOS_NODE_ID)
+					for (k = 0; k < temp.NeighborsLength; k++) {
+						if (NeighborsArr[k] == temp3.Dest) {
+							temp3.Next = temp2.Node;
+							if (!call Tentative.isEmpty()) {
+								for (k = 0; k < call Tentative.size(); k++) {
+									temp4 = call Tentative.get(k);
+									if (temp4.Dest == temp3.Dest) {
+										inTentList = TRUE;
+										tentInt = k;
+									}
+								}
+							}
+							if (!call Confirmed.isEmpty()) {
+								for (k = 0; k < call Confirmed.size(); k++) {
+									temp4 = call Confirmed.get(k);
+									if (temp4.Dest == temp3.Dest) {
+										inConList = TRUE;
+									}
+								}
+							}
+							if (!inTentList && !inConList) {
+								call Tentative.pushfront(temp3);
+							}
+							else if (inTentList) {
+								temp4 = call Tentative.get(tentInt);
+								if (temp3.Cost < temp4.Cost) {
+									call Tentative.removeFromList(tentInt);
+									call Tentative.pushfront(temp3);
+								}
 							}
 						}
 					}
-					if (!call Confirmed.isEmpty()) {
-						for (k = 0; k < call Confirmed.size(); k++) {
-							temp4 = call Confirmed.get(k);
-							if (temp4.Dest == temp3.Dest) {
-								inConList = TRUE;
-							}
+				}
+				if (call Tentative.isEmpty()) {
+					//print
+				}
+				else {
+					minCost = 65536;
+					for (i = 0; i < call Tentative.size(); i++) {
+						minTemp = call Tentative.get(i);
+						if (minTemp.Cost < minCost) {
+							minCost = minTemp.Cost;
+							minInt = i;
 						}
 					}
-					if (!inTentList && !inConList) {
-						call Tentative.pushfront(temp3);
-					}
-					else if (inTentList) {
-						temp4 = call Tentative.get(tentInt);
-						if (temp3.Cost < temp4.Cost) {
-							call Tentative.removeFromList(tentInt);
-							call Tentative.pushfront(temp3);
-
-						}
-					}
+					minTemp = call Tentative.get(minInt);
+					call Tentative.removeFromList(minInt);
+					algorithm(minTemp.Dest, minTemp.Cost, minTemp.Next);
 				}
 			}
 		}
 	}
- }
