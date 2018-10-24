@@ -54,8 +54,12 @@ implementation {
     components new ListC(LinkState, 64) as TempC;
     Node.Temp -> TempC;
 
+    components new HashmapC(int, 64) as nextTableC;
+    Node.nextTable -> nextTableC;
+
     components RandomC as Random;
     Node.Random -> Random;
 
     Node.PeriodicTimer -> PeriodicTimerC;
+
 }
