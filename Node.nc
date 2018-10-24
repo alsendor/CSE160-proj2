@@ -144,19 +144,19 @@ implementation{
                 if (len == sizeof(pack)) {
                         //  Dead Packet: Timed out
                         if (recievedMsg->TTL == 0) {
-                                dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Dead of old age\n", recievedMsg->src, recievedMsg->dest);
+                                dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) TIMED OUT\n", recievedMsg->src, recievedMsg->dest);
                                 return msg;
                         }
 
                         //  Old Packet: Has been seen
                         else if (packSeen(recievedMsg)) {
-                                //dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Seen Before\n", recievedMsg->src, recievedMsg->dest);
+                                dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) ALREADY DETECTED\n", recievedMsg->src, recievedMsg->dest);
                                 return msg;
                         }
 
                         //  Ping to me
                         if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == TOS_NODE_ID) {
-                                dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) -------------------------------------------------->>>>Ping: %s\n", recievedMsg->src, recievedMsg->dest,  recievedMsg->payload);
+                                dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) PING: %s\n", recievedMsg->src, recievedMsg->dest,  recievedMsg->payload);
                                 packLog(&sendPackage);
 
                                 // Sending Ping Reply
@@ -172,16 +172,15 @@ implementation{
 
                         //  Ping Reply to me
                         else if (recievedMsg->protocol == PROTOCOL_PINGREPLY && recievedMsg->dest == TOS_NODE_ID) {
-                                dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) -------------------------------------------------->>>>Ping Reply: %s\n", recievedMsg->src, recievedMsg->dest, recievedMsg->payload);
+                                dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) PING REPLY: %s\n", recievedMsg->src, recievedMsg->dest, recievedMsg->payload);
                                 packLog(&sendPackage);
                                 return msg;
                         }
 
                         //  Neighbor Discovery: Timer
                         else if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == AM_BROADCAST_ADDR) {
-                                //dbg(GENERAL_CHANNEL, "\tNeighbor Discovery Ping Recieved\n");
-                                // Log as neighbor
-                                //dbg(GENERAL_CHANNEL, "Neighbor Discovery packet SRC: %d\n", recievedMsg->src);
+                                dbg(GENERAL_CHANNEL, "\tNEIGHBOR DISCOVERY PING\n");
+                                dbg(GENERAL_CHANNEL, "Neighbor Discovery packet SRC: %d\n", recievedMsg->src);
                                 addNeighbor(recievedMsg->src);
                                 packLog(recievedMsg);
                                 return msg;
@@ -189,9 +188,9 @@ implementation{
 
                         // Receiving DV Table
                         else if(recievedMsg->dest == TOS_NODE_ID && recievedMsg->protocol == PROTOCOL_DV) {
-                             /* dbg(GENERAL_CHANNEL, "CALLING MERGERROUTE!!\n"); */
+                             dbg(GENERAL_CHANNEL, "MERGE ROUTE\n");
                              diffRoute = mergeRoute((uint8_t*)recievedMsg->payload, (uint8_t)recievedMsg->src);
-                             //signal CommandHandler.printRouteTable();
+                             signal CommandHandler.printRouteTable();
                              if(diffRoute){
                                   sendRT();
                              }
@@ -207,11 +206,6 @@ implementation{
                                 makePack(&sendPackage, recievedMsg->src, recievedMsg->dest, recievedMsg->TTL, recievedMsg->protocol, recievedMsg->seq, (uint8_t*)recievedMsg->payload, len);
                                 packLog(&sendPackage);
 
-                                /**********FOR LATER: Reduce Spamming the network**************
-                                 * Need to use node-specific neighbors for destination
-                                 * rather than AM_BROADCAST_ADDR after we implement
-                                 * neighbor discovery
-                                 */
                                 //signal CommandHandler.printNeighbors();
                                 sendToNeighbor(&sendPackage);
                                 return msg;
@@ -222,7 +216,7 @@ implementation{
                         return msg;
                 }// End of Currupt if statement
 
-                dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Currrupted", recievedMsg->src, recievedMsg->dest);
+                dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) CORRUPT", recievedMsg->src, recievedMsg->dest);
                 return msg;
 }
 
