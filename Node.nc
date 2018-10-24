@@ -42,6 +42,7 @@ module Node {
         //uses interface DVRTableC <uint8_t> as Table;
 }
 
+<<<<<<< HEAD
 implementation {
 
         pack sendPackage;
@@ -120,6 +121,86 @@ implementation {
                      call TableUpdateTimer.startPeriodicAt(t0, dt);
                      fired = TRUE;
                 }
+=======
+implementation{
+
+    uint16_t sequenceCounter = 0;             //Create a sequence counter
+  //uint16_t accessCounter = 0;               //Create an access counter
+    uint8_t maxHops = 18;
+    uint8_t NeighborsListSize = 19;
+    uint8_t maxNeighborTTL = 20;
+    uint8_t Neighbors[19];
+    uint8_t Routing[255][3];
+
+    pack sendPackage;
+    bool isFired = FALSE;
+    bool initialized = FALSE;
+
+    void discoverNeighbors();
+    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
+
+    void packLog(pack *Package);           //Function to create a log of packs
+    bool packSeen(pack *Package);            //Function to check for previously seen packs
+
+    //void route(uint16_t Dest, uint16_t Cost, uint16_t Next);
+
+    //Functions for handling neighbor nodes
+    void route();
+    void addNeighbor(uint8_t Neighbor);
+    void lessNeighborTTL();
+    void sendToNeighbor(pack *recievedMsg);
+    bool destNeighbor(pack *recievedMsg);
+    void scanForNeighbors();
+
+    //Distance Vector table initialize, insert new, merge route, split horizon, and send table to all neighbors
+    void initializeRT();
+    void insertRT(uint8_t dest, uint8_t cost, uint8_t nextHop);
+    bool mergeRoute(uint8_t *newRoute, uint8_t src);
+    void splitHorizon(uint8_t nextHop);
+    void sendRT();
+
+
+    //Period timer function
+    event void Timer.fired() {
+       uint32_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
+       dbg(NEIGHBOR_CHANNEL, "Calling Scan For Neighbors\n");
+       scanForNeighbors();
+       //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+       //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+
+       Tinitial = 20000 + (call Random.rand32() % 1000);
+       Tinterval = 25000 + (call Random.rand32() % 10000);
+
+       if (!isFired) {
+         call tableTimer.startPeriodicAt(Tinitial, Tinterval);
+         isFired = TRUE;
+       }
+     }
+
+    //Table timer function
+     event void tableTimer.fired() {
+       if (initialized == FALSE) {
+         initializeRT();
+         initialized = TRUE;
+         signal CommandHandler.printNeighbors();
+         signal CommandHandler.printRouteTable();
+       }
+       else {
+         sendRT();
+       }
+     }
+
+    event void Boot.booted() {
+    uint8_t Tinitial, Tinterval;
+    call AMControl.start();
+
+    Tinitial = 500 + (call Random.rand32() % 1000);
+    Tinterval = 25000 + (call Random.rand32() % 10000);
+    call Timer.startPeriodicAt(Tinitial, Tinterval);
+
+    dbg(GENERAL_CHANNEL, "Booted\n");
+  }
+>>>>>>> a29aa49dcd9ababb8e3286ca481dbe6f376fa774
 
                 //dbg(GENERAL_CHANNEL, "\tFired time: %d\n", call Timer.getNow());
                 //dbg(GENERAL_CHANNEL, "\tTimer Fired!\n");
