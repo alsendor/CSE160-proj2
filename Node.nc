@@ -429,7 +429,7 @@ implementation{
 
       int i;
       dbg(GENERAL_CHANNEL, "\t%d's Routing Table\n", TOS_NODE_ID);
-      dbg(GENERAL_CHANNEL, "\tDest\tHop\tCount\n");
+      dbg(GENERAL_CHANNEL, "\tDest\tCount\tNext Hop\n");
       for (i = 1; i < 20; i++) {
               dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", Routing[i][0], Routing[i][1], Routing[i][2]);
       }
