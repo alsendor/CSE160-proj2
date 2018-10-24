@@ -104,7 +104,7 @@ implementation{
          initializeRT();
          initialized = TRUE;
       //   signal CommandHandler.printNeighbors();
-      //   signal CommandHandler.printRouteTable();
+         signal CommandHandler.printRouteTable();
        }
        else {
          sendRT();
@@ -698,7 +698,7 @@ implementation{
         poisonTable += 3;
      }
 
-     signal CommandHandler.printRouteTable();
+    // signal CommandHandler.printRouteTable();
 
   }
 
