@@ -684,8 +684,21 @@ implementation{
 
     //Using memcpy to copy routing table information
     memcpy(poisonTable, &Routing, sizeof(Routing));
-    signal CommandHandler.printRouteTable();
     start = poisonTable;
+  //  signal CommandHandler.printRouteTable();
+
+    for (i = 0; i < 20; i++) {
+      if (NeighborsList[i] > 0) {
+        if (Routing[i][1] == 255) {
+          *(start + (i * 3) + 0) = i;
+          *(start + (i * 3) + 1) = i;
+          *(start + (i * 3) + 2) = i;
+          Routing[i][0] = i;
+          Routing[i][1] = i;
+          Routing[i][2] = i;
+        }
+      }
+    }
 
     //Poison Control Implementation: make the path cost the max hop at the moment
     for(i = 0; i < 20; i++)
