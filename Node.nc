@@ -1,127 +1,49 @@
 /*
- * ANDES Lab - University of California, Merced
- * This class provides the basic functions of a network node.
- *
- * @author UCM ANDES Lab
- * @date   2013/09/03
- *
- */
+* ANDES Lab - University of California, Merced
+* This class provides the basic functions of a network node.
+*
+* @author UCM ANDES Lab
+* @date   2013/09/03
+*
+*/
 #include <Timer.h>
 #include "includes/command.h"
 #include "includes/packet.h"
 #include "includes/CommandMsg.h"
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
-//#include "includes/DVRTable.h"
-//  Tried using this am types header to add a flood address but not sure if it didn't work cause it wasn't compiling due code errors
-//#include "includes/am_types.h"
 
-module Node {
+/*typedef nx_struct Neighbor {
+   nx_uint16_t Node;
+   nx_uint16_t pingNumber;
+}Neighbor;
+*/
+module Node{
 
-        //  Wiring from .nc File
-        uses interface Boot;
+    uses interface Boot;
+    uses interface SplitControl as AMControl;
+    uses interface Receive;
+    uses interface SimpleSend as Sender;
+    uses interface CommandHandler;
 
-        uses interface SplitControl as AMControl;
-        uses interface Receive;
+    uses interface List<pack> as PackList;     //Create list of pack called PackList
+/*
+    uses interface List<Neighbor> as NeighborsList; //Create list of neighbors
+    uses interface List<Neighbor> as NeighborsDropped; //Creates list of dropped neighbors
+    uses interface List<Neighbor> as NeighborCosts; //Creates list of neighboring nodes costs
+    uses interface List<LinkState> as RoutingTable; //Link State table used for Routing route
+    uses interface List<LinkState> as ConfirmedTable; //ConfirmedTable table
+    uses interface List<LinkState> as TentativeTable; //TentativeTable Table
+    uses interface Hashmap<int> as nextTable;
+*/
 
-        uses interface SimpleSend as Sender;
+    uses interface Random as Random;
 
-        uses interface CommandHandler;
+    uses interface Timer<TMilli> as Timer;
+    uses interface Timer<TMilli> as tableTimer; //Creates implementation of timer for neighbor periods
 
-        uses interface List <pack> as PackLogs;
-
-        //uses interface List <uint16_t> as NeighborList;
-        //uses interface List <NeighborNode> as NeighborList;
-
-        uses interface Random as Random;
-
-        uses interface Timer<TMilli> as Timer;
-
-        uses interface Timer<TMilli> as TableUpdateTimer;
-
-        //uses interface DVRTableC <uint8_t> as Table;
 }
 
-<<<<<<< HEAD
-implementation {
-
-        pack sendPackage;
-        uint16_t nodeSeq = 0;
-        uint8_t MAX_HOP = 18;
-        bool fired = FALSE;
-        bool initialized = FALSE;
-        uint8_t numroutes = 0;
-        uint8_t NeighborListSize = 19;
-        uint8_t MAX_NEIGHBOR_TTL = 20;
-
-        uint8_t NeighborList[19];
-        uint8_t routing[255][3];
-
-        /* typedef struct DVRtouple {
-           uint8_t dest;
-           uint8_t cost;
-           uint8_t nextHop;
-        } DVRtouple; */
-
-
-        /*
-        typedef struct DVRTable {
-                DVRtouple* table[19];
-        } DVRTable;
-        */
-        //DVRTable* DVTable;
-        //DVRTable table;
-        //  Here we can lis all the neighbors for this mote
-        //  We getting an error with neighbors
-
-        //  Prototypes
-        void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
-        void logPacket(pack* payload);
-        bool hasSeen(pack* payload);
-        void addNeighbor(uint8_t Neighbor);
-        void reduceNeighborsTTL();
-        void relayToNeighbors(pack* recievedMsg);
-        bool destIsNeighbor(pack* recievedMsg);
-        void scanNeighbors();
-        //DV Table Functions
-        void initialize();
-        void insert(uint8_t dest, uint8_t cost, uint8_t nextHop);
-        void sendTableToNeighbors();
-
-        bool mergeRoute(uint8_t* newRoute, uint8_t src);
-        void splitHorizon(uint8_t nextHop);
-
-
-        //  Node boot time calls
-        event void Boot.booted(){
-                uint32_t t0, dt;
-                //  Booting/Starting our lowest networking layer exposed in TinyOS which is also called active messages (AM)
-                call AMControl.start();
-
-                // t0 Timer start time, dt Timer interval time
-                t0 = 500 + call Random.rand32() % 1000;
-                dt = 25000 + (call Random.rand32() % 10000);
-                call Timer.startPeriodicAt(t0, dt);
-
-                dbg(GENERAL_CHANNEL, "\tBooted\n");
-        }
-
-        //  This function is ran after t0 Milliseconds the node is alive, and fires every dt seconds.
-        event void Timer.fired() {
-                // We might wanna remove this since the timer fires fro every 25 seconds to 35 Seconds
-                uint32_t t0, dt;
-                //dbg(GENERAL_CHANNEL, "//////////////////////////////////////////////////////////////////////////////////////\n");
-                //signal CommandHandler.printNeighbors();
-                //clearNeighbors();
-                scanNeighbors();
-
-                t0 = 20000 + call Random.rand32() % 1000;
-                dt = 25000 + (call Random.rand32() % 10000);
-                if(!fired){
-                     call TableUpdateTimer.startPeriodicAt(t0, dt);
-                     fired = TRUE;
-                }
-=======
 implementation{
 
     uint16_t sequenceCounter = 0;             //Create a sequence counter
@@ -158,7 +80,6 @@ implementation{
     bool mergeRoute(uint8_t *newRoute, uint8_t src);
     void splitHorizon(uint8_t nextHop);
     void sendRT();
-
 
     //Period timer function
     event void Timer.fired() {
@@ -200,43 +121,23 @@ implementation{
 
     dbg(GENERAL_CHANNEL, "Booted\n");
   }
->>>>>>> a29aa49dcd9ababb8e3286ca481dbe6f376fa774
 
-                //dbg(GENERAL_CHANNEL, "\tFired time: %d\n", call Timer.getNow());
-                //dbg(GENERAL_CHANNEL, "\tTimer Fired!\n");
-        }
+    event void AMControl.startDone(error_t err){
+      if(err == SUCCESS){
+          dbg(GENERAL_CHANNEL, "Radio On\n");
+      }
+      else {
+          call AMControl.start(); //Retry until success
+          }
+      }
 
-        event void TableUpdateTimer.fired() {
-             if(initialized == FALSE) {
-                     initialize();
-                     initialized = TRUE;
-                  //signal CommandHandler.printNeighbors();
-             } else {
-                //dbg (GENERAL_CHANNEL, "\tNode %d is Sharing his table with Neighbors\n", TOS_NODE_ID);
-                sendTableToNeighbors();
-             }
-        }
+      event void AMControl.stopDone(error_t err){}
 
-        //  Make sure all the Radios are turned on
-        event void AMControl.startDone(error_t err){
-                if(err == SUCCESS)
-                        dbg(GENERAL_CHANNEL, "\tRadio On\n");
-                else
-                        call AMControl.start();
-        }
-
-        event void AMControl.stopDone(error_t err){
-        }
-
-        //  Handles all the Packs we are receiving.
-        event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len) {
-                pack* recievedMsg;
+        //Handles recieved packs
+    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
+      pack* recievedMsg;
                 bool alteredRoute = FALSE;
                 recievedMsg = (pack *)payload;
-
-                /* if (recievedMsg->protocol == PROTOCOL_DV) {
-                        dbg(GENERAL_CHANNEL, "Recieved DV Packet\n");
-                } */
 
                 if (len == sizeof(pack)) {
                         //  Dead Packet: Timed out
@@ -246,7 +147,7 @@ implementation{
                         }
 
                         //  Old Packet: Has been seen
-                        else if (hasSeen(recievedMsg)) {
+                        else if (packSeen(recievedMsg)) {
                                 //dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Seen Before\n", recievedMsg->src, recievedMsg->dest);
                                 return msg;
                         }
@@ -254,12 +155,12 @@ implementation{
                         //  Ping to me
                         if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == TOS_NODE_ID) {
                                 dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) -------------------------------------------------->>>>Ping: %s\n", recievedMsg->src, recievedMsg->dest,  recievedMsg->payload);
-                                logPacket(&sendPackage);
+                                packLog(&sendPackage);
 
                                 // Sending Ping Reply
-                                nodeSeq++;
-                                makePack(&sendPackage, recievedMsg->dest, recievedMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, nodeSeq, (uint8_t*)recievedMsg->payload, len);
-                                logPacket(&sendPackage);
+                                sequenceCounter++;
+                                makePack(&sendPackage, recievedMsg->dest, recievedMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequenceCounter, (uint8_t*)recievedMsg->payload, len);
+                                packLog(&sendPackage);
                                 call Sender.send(sendPackage, AM_BROADCAST_ADDR);
 
                                 //signal CommandHandler.printNeighbors();
@@ -270,7 +171,7 @@ implementation{
                         //  Ping Reply to me
                         else if (recievedMsg->protocol == PROTOCOL_PINGREPLY && recievedMsg->dest == TOS_NODE_ID) {
                                 dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) -------------------------------------------------->>>>Ping Reply: %s\n", recievedMsg->src, recievedMsg->dest, recievedMsg->payload);
-                                logPacket(&sendPackage);
+                                packLog(&sendPackage);
                                 return msg;
                         }
 
@@ -280,7 +181,7 @@ implementation{
                                 // Log as neighbor
                                 //dbg(GENERAL_CHANNEL, "Neighbor Discovery packet SRC: %d\n", recievedMsg->src);
                                 addNeighbor(recievedMsg->src);
-                                logPacket(recievedMsg);
+                                packLog(recievedMsg);
                                 return msg;
                         }
 
@@ -290,7 +191,7 @@ implementation{
                              alteredRoute = mergeRoute((uint8_t*)recievedMsg->payload, (uint8_t)recievedMsg->src);
                              //signal CommandHandler.printRouteTable();
                              if(alteredRoute){
-                                  sendTableToNeighbors();
+                                  sendRT();
                              }
                              return msg;
                         }
@@ -302,7 +203,7 @@ implementation{
                                 // Forward and logging package
                                 recievedMsg->TTL--;
                                 makePack(&sendPackage, recievedMsg->src, recievedMsg->dest, recievedMsg->TTL, recievedMsg->protocol, recievedMsg->seq, (uint8_t*)recievedMsg->payload, len);
-                                logPacket(&sendPackage);
+                                packLog(&sendPackage);
 
                                 /**********FOR LATER: Reduce Spamming the network**************
                                  * Need to use node-specific neighbors for destination
@@ -310,7 +211,7 @@ implementation{
                                  * neighbor discovery
                                  */
                                 //signal CommandHandler.printNeighbors();
-                                relayToNeighbors(&sendPackage);
+                                sendToNeighbor(&sendPackage);
                                 return msg;
                         }
 
@@ -321,13 +222,8 @@ implementation{
 
                 dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Currrupted", recievedMsg->src, recievedMsg->dest);
                 return msg;
-        }
+}
 
-<<<<<<< HEAD
-        //  This is how we send a Ping to one another
-        event void CommandHandler.ping(uint16_t destination, uint8_t *payload) {
-                nodeSeq++;
-=======
   event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
     sequenceCounter++;
     dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Ping\n", TOS_NODE_ID, destination);
@@ -337,7 +233,6 @@ implementation{
   }
 /*
     else if(myMsg->dest == AM_BROADCAST_ADDR) { //check if looking for neighbors
-
 				bool found;
 				bool match;
 				uint16_t length;
@@ -350,9 +245,7 @@ implementation{
 					makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
 					pushPack(sendPackage);
 					call Sender.send(sendPackage, myMsg->src);
-
 		      }
-
           //if the packet is sent to ping for replies
 				else if (myMsg->protocol == PROTOCOL_PINGREPLY){
 					//update ping number, search and see if the neighbor was found
@@ -395,7 +288,6 @@ implementation{
 						LSP.Seq = myMsg->seq;
 						LSP.Cost = MAX_TTL - myMsg->TTL;
 						//dbg(GENERAL_CHANNEL, "myMsg->TTL is %d, LSP.Cost is %d, good is %d\n", myMsg->TTL, LSP.Cost, good);
-
 						if (!call RoutingTable.isEmpty()){
 							dbg(GENERAL_CHANNEL, "list before removal loop\n");
 							printLSP();
@@ -491,400 +383,487 @@ implementation{
 						neighbor1.Node = myMsg->src;
 						neighbor1.pingNumber = 0;
 						call NeighborsList.pushback(neighbor1);
-
 					}
 				}
-
     } else if(myMsg->protocol == 0 && (myMsg->dest == TOS_NODE_ID)) {      //Check if correct protocol is run. Check the destination node ID
-
         dbg(FLOODING_CHANNEL, "Packet destination achieved. Package Payload: %s\n", myMsg->payload);    //Return message for correct destination found and its payload.
         makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequenceCounter, (uint8_t *) myMsg->payload, sizeof(myMsg->payload));      //Make new pack
         sequenceCounter++;      //Increment our sequence number
         pushPack(sendPackage);  //Push the pack again
         call Sender.send(sendPackage, AM_BROADCAST_ADDR);       //Rebroadcast
-
     } else if((myMsg->dest == TOS_NODE_ID) && myMsg->protocol == 1) {   //Check if correct protocol is run. Check the destination node ID
-
         dbg(FLOODING_CHANNEL, "Recieved a reply it was delivered from %d!\n", myMsg->src);   //Return message for pingreply and get the source of where it came from
-
     } else {
-
         makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));      //make new pack
         dbg(FLOODING_CHANNEL, "Recieved packet from %d, meant for %d, TTL is %d. Rebroadcasting\n", myMsg->src, myMsg->dest, myMsg->TTL);        //Give data of source, intended destination, and TTL
         pushPack(sendPackage);          //Push the pack again
         call Sender.send(sendPackage, AM_BROADCAST_ADDR);       //Rebroadcast
->>>>>>> 650fa704114341f7fddbc3e906bb85adf7f84b48
-
-                dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Ping Sent\n", TOS_NODE_ID, destination);
-                makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL+5, PROTOCOL_PING, nodeSeq, payload, PACKET_MAX_PAYLOAD_SIZE);
-                logPack(&sendPackage);
-                //logPacket(&sendPackage);
-                call Sender.send(sendPackage, AM_BROADCAST_ADDR);
         }
-
-        /*
-██████  ██████  ██ ███    ██ ████████ ███████
-██   ██ ██   ██ ██ ████   ██    ██    ██
-██████  ██████  ██ ██ ██  ██    ██    ███████
-██      ██   ██ ██ ██  ██ ██    ██         ██
-██      ██   ██ ██ ██   ████    ██    ███████
+    return msg;
+}
+    dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
+    return msg;
+}
+    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
+    dbg(GENERAL_CHANNEL, "PING EVENT \n");
+    makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
+    call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+    }
 */
 
-        //  This are functions we are going to be implementing in the future.
-        event void CommandHandler.printNeighbors() {
-                int i, count = 0;
-                     dbg(GENERAL_CHANNEL, "NeighborList Size: %d\n", NeighborListSize);
-                        for(i = 1; i < (NeighborListSize); i++) {
-                             if(NeighborList[i] > 0){
-                                  dbg(NEIGHBOR_CHANNEL, "%d -> %d\n", TOS_NODE_ID, i);
-                                  count++;
-                             }
-                        }
-                        if(count == 0)
-                              dbg(GENERAL_CHANNEL, "Neighbor List is Empty\n");
-        }
+    //Printing functions
+    event void CommandHandler.printNeighbors(){
 
-        event void CommandHandler.printRouteTable() {
-                int i;
-                dbg(GENERAL_CHANNEL, "\t~~~~~~~Mote %d's Routing Table~~~~~~~\n", TOS_NODE_ID);
-                dbg(GENERAL_CHANNEL, "\tDest\tCost\tNext Hop:\n");
-                for (i = 1; i < 20; i++) {
-                        dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", routing[i][0], routing[i][1], routing[i][2]);
-                }
-        }
-
-        event void CommandHandler.printLinkState(){
-        }
-
-        event void CommandHandler.printDistanceVector(){
-        }
-
-        event void CommandHandler.setTestServer(){
-        }
-
-        event void CommandHandler.setTestClient(){
-        }
-
-        event void CommandHandler.setAppServer(){
-        }
-
-        event void CommandHandler.setAppClient(){
-        }
-
-        /*
-██████   █████   ██████ ██   ██     ██   ██  █████  ███    ██ ██████  ██      ███████ ██      ██ ███    ██  ██████
-██   ██ ██   ██ ██      ██  ██      ██   ██ ██   ██ ████   ██ ██   ██ ██      ██      ██      ██ ████   ██ ██
-██████  ███████ ██      █████       ███████ ███████ ██ ██  ██ ██   ██ ██      █████   ██      ██ ██ ██  ██ ██   ███
-██      ██   ██ ██      ██  ██      ██   ██ ██   ██ ██  ██ ██ ██   ██ ██      ██      ██      ██ ██  ██ ██ ██    ██
-██      ██   ██  ██████ ██   ██     ██   ██ ██   ██ ██   ████ ██████  ███████ ███████ ███████ ██ ██   ████  ██████
-*/
-
-
-
-        void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
-                Package->src = src;
-                Package->dest = dest;
-                Package->TTL = TTL;
-                Package->seq = seq;
-                Package->protocol = protocol;
-                memcpy(Package->payload, payload, length);
-        }
-
-        //  Logging Packets: Knowledge of seen Packets
-        void logPacket(pack* payload) {
-
-                uint16_t src = payload->src;
-                uint16_t seq = payload->seq;
-                pack loggedPack;
-
-                //if packet log isnt empty and contains the src key
-                if(call PackLogs.size() == 64) {
-                        //remove old key value pair and insert new one
-                        call PackLogs.popfront();
-                }
-                //logPack(payload);
-                makePack(&loggedPack, payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq, (uint8_t*) payload->payload, sizeof(pack));
-                call PackLogs.pushback(loggedPack);
-
-                if (payload->protocol == PROTOCOL_PING) {
-                   //dbg(FLOODING_CHANNEL, "\tPackage(%d,%d)---Ping: Updated Seen Packs List\n", payload->src, payload->dest);
-                   } else if (payload->protocol == PROTOCOL_PINGREPLY) {
-                   //dbg(FLOODING_CHANNEL, "\tPackage(%d,%d)~~~Ping Reply: Updated Seen Packs List\n", payload->src, payload->dest);
-                   } else {
-
-                   }
-        }
-
-        bool hasSeen(pack* packet) {
-                pack stored;
-                int i, size;
-                size = call PackLogs.size();
-                //dbg(FLOODING_CHANNEL, "\t%i Packets in the list\n", size);
-                //dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) S_Checking Message:%s\n", payload->src, payload->dest, payload->payload);
-                if(size > 0) {
-                        //dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) PackLogs not Empty:%s\n", payload->src, payload->dest, payload->payload);
-                        for (i = 0; i < size; i++) {
-                                //dbg(FLOODING_CHANNEL, "\t%i th Packet in the list\n", i);
-                                stored = call PackLogs.get(i);
-                                if (stored.src == packet->src && stored.seq == packet->seq) {
-                                        //dbg(FLOODING_CHANNEL, "\t%s\n", stored.payload);
-                                        return 1;
-                                }
-                        }
-                }
-                return 0;
-        }
-
-        /*
-███    ██ ███████ ██  ██████  ██   ██ ██████   ██████  ██████      ██████  ██ ███████  ██████  ██████  ██    ██ ███████ ██████  ██    ██
-████   ██ ██      ██ ██       ██   ██ ██   ██ ██    ██ ██   ██     ██   ██ ██ ██      ██      ██    ██ ██    ██ ██      ██   ██  ██  ██
-██ ██  ██ █████   ██ ██   ███ ███████ ██████  ██    ██ ██████      ██   ██ ██ ███████ ██      ██    ██ ██    ██ █████   ██████    ████
-██  ██ ██ ██      ██ ██    ██ ██   ██ ██   ██ ██    ██ ██   ██     ██   ██ ██      ██ ██      ██    ██  ██  ██  ██      ██   ██    ██
-██   ████ ███████ ██  ██████  ██   ██ ██████   ██████  ██   ██     ██████  ██ ███████  ██████  ██████    ████   ███████ ██   ██    ██
-*/
-
-        void addNeighbor(uint8_t Neighbor) {
-             if(Neighbor == 0)
-               dbg(GENERAL_CHANNEL, "ZERO SOURCE WTFFFFFFFFFFFFFFFF");
-             NeighborList[Neighbor] = MAX_NEIGHBOR_TTL;
-        }
-
-        void reduceNeighborsTTL() {
-                int i;
-                for (i = 0; i < NeighborListSize; i++) {
-                        if(NeighborList[i] == 1) {
-                                NeighborList[i] -= 1;
-                                routing[i][1] = 255;
-                                dbg (NEIGHBOR_CHANNEL, "\t Node %d Dropped from the Network \n", i);
-
-                                // NeighborPing to neighbor we are dropppping
-                                nodeSeq++;
-                                makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, nodeSeq, "Looking-4-Neighbors", PACKET_MAX_PAYLOAD_SIZE);
-                                call Sender.send(sendPackage, (uint8_t) i);
-                        }
-                        if (NeighborList[i] > 1) {
-                                NeighborList[i] -= 1;
-                        }
-                }
-        }
-
-        //  sends message to all known neighbors in neighbor list; if list is empty, forwards to everyone within range using AM_BROADCAST_ADDR.
-        void relayToNeighbors(pack* recievedMsg) {
-                if(destIsNeighbor(recievedMsg)) {
-                        dbg(NEIGHBOR_CHANNEL, "\tDeliver Message to Destination\n");
-                        call Sender.send(sendPackage, recievedMsg->dest);
-                } else {
-                        //dbg(NEIGHBOR_CHANNEL, "\tTrynna Forward To Neighbors\n");
-                        call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-                }
-        }
-
-        bool destIsNeighbor(pack* recievedMsg) {
-                        if(NeighborList[recievedMsg->dest] > 0)
-                            return 1;
-                return 0;
-        }
-
-        //  Used for neighbor discovery, sends a Ping w/ TTL of 1 to AM_BROADCAST_ADDR.
-        void scanNeighbors() {
-                int i;
-                if (!initialized) {
-                        nodeSeq++;
-                        makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, nodeSeq, "Looking-4-Neighbors", PACKET_MAX_PAYLOAD_SIZE);
-                        call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-                } else  {
-                        reduceNeighborsTTL();
-                }
-
-        }
-
-        /*
-        ██████  ██    ██     ████████  █████  ██████  ██      ███████
-        ██   ██ ██    ██        ██    ██   ██ ██   ██ ██      ██
-        ██   ██ ██    ██        ██    ███████ ██████  ██      █████
-        ██   ██  ██  ██         ██    ██   ██ ██   ██ ██      ██
-        ██████    ████          ██    ██   ██ ██████  ███████ ███████
-        */
-
-
-
-        void initialize() {
-                int i, j, neighbor;
-                bool contains;
-                dbg(ROUTING_CHANNEL, "\tMOTE(%d) Initializing DVR Table\n");
-
-                // Setting all the Nodes in our pool/routing table to  MAX_HOP and setting their nextHop to our emlpty first cell
-                for(i = 1; i < 20; i++) {
-                         routing[i][0] = i;
-                        routing[i][1] = 255;
-                        routing[i][2] = 0;
-                }
-
-                // Setting the cost for SELF
-                routing[TOS_NODE_ID][0] = TOS_NODE_ID;
-                routing[TOS_NODE_ID][1] = 0;
-                routing[TOS_NODE_ID][2] = TOS_NODE_ID;
-
-                // Setting the cost to all my neighbors
-                for(j = 1; j < NeighborListSize; j++) {
-                         if(NeighborList[j] > 0)
-                              insert(j, 1, j);
-                }
-                /* dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~initialize\n", TOS_NODE_ID);
-                signal CommandHandler.printNeighbors(); */
+      int i, cnt = 0;
+      dbg(GENERAL_CHANNEL, "Neighbors Size: %d\n", NeighborsListSize);
+      for(i = 1; i < (NeighborsListSize); i++) {
+           if(Neighbors[i] > 0){
+                dbg(NEIGHBOR_CHANNEL, "%d -> %d\n", TOS_NODE_ID, i);
+                cnt++;
            }
+      }
+      if(cnt == 0)
+            dbg(GENERAL_CHANNEL, "Neighbor List is Empty\n");
 
-        void insert(uint8_t dest, uint8_t cost, uint8_t nextHop) {
-                //input data to a touple
-                routing[dest][0] = dest;
-                routing[dest][1] = cost;
-                routing[dest][2] = nextHop;
+   }
+   //Print Routing Table
+    event void CommandHandler.printRouteTable(){
+
+      int i;
+      dbg(GENERAL_CHANNEL, "\t%d's Routing Table\n", TOS_NODE_ID);
+      dbg(GENERAL_CHANNEL, "\tDest\tHop\tCount\n");
+      for (i = 1; i < 20; i++) {
+              dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", Routing[i][0], Routing[i][1], Routing[i][2]);
+      }
+
+    }
+
+    event void CommandHandler.printLinkState(){}
+
+    event void CommandHandler.printDistanceVector(){}
+
+    event void CommandHandler.setTestServer(){}
+
+    event void CommandHandler.setTestClient(){}
+
+    event void CommandHandler.setAppServer(){}
+
+    event void CommandHandler.setAppClient(){}
+
+//Pack handler functions
+    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
+            Package->src = src;
+            Package->dest = dest;
+            Package->TTL = TTL;
+            Package->seq = seq;
+            Package->protocol = protocol;
+            dbg (GENERAL_CHANNEL, "makePack: Package: src: %d, dest: %d, TTL: %d, seq: %d \n", Package->src, Package->dest, Package->TTL, Package->protocol, Package->seq);
+            memcpy(Package->payload, payload, length);
+    }
+    //Seen packs
+    void packLog(pack *payload) {
+      pack loggedP;
+      uint16_t src = payload->src;
+      uint16_t seq = payload->seq;
+      //Test if list contains the src key & check if its empty
+      if (call PackList.size() == 64) {
+        call PackList.popfront();
+      }
+      dbg (GENERAL_CHANNEL, "Pack Log: Payload: src: %d, dest: %d, TTL: %d, seq: %d \n", payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq);
+      makePack(&loggedP, payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq, (uint8_t*) payload->payload, sizeof(pack));
+      call PackList.pushback(loggedP);
+
+    }
+
+    bool packSeen(pack *packet) {
+      pack store;
+      int x, size;
+      size = call PackList.size();
+
+      if(size > 0) {
+        for (x = 0; x < size; x++) {
+          store = call PackList.get(x);
+          if (store.src == packet->src && store.seq == packet->seq) {
+            dbg (GENERAL_CHANNEL, "PACKSEEN: src: %d, seq: %d \n", packet->src, packet->seq);
+            return 1;
+          }
+        }
+      }
+      return 0;
+    }
+
+  /*  bool findPack(pack *Package) {      //findpack function
+        uint16_t size = call PackList.size();     //get size of the list
+        pack Match;                 //create variable to test for matches
+        uint16_t i = 0;             //initialize variable to 0
+        for (i = 0; i < size; i++) {
+            Match = call PackList.get(i);     //iterate through the list to test for matches
+            if((Match.src == Package->src) && (Match.dest == Package->dest) && (Match.seq == Package->seq)) {   //Check for matches of source, destination, and sequence number
+                return TRUE;
+                }
+            }
+            return FALSE;
+        }
+    void pushPack(pack Package) {   //pushpack function
+        if (call PackList.isFull()) {
+            call PackList.popfront();         //if the list is full, pop off the front
+        }
+        call PackList.pushback(Package);      //continue adding packages to the list
+    }
+*/
+
+//Neighbor Discovery
+
+    void addNeighbor(uint8_t Neighbor) {
+      if(Neighbor == 0)
+          dbg(GENERAL_CHANNEL, "This is the neighbor at Source 0");
+       Neighbors[Neighbor] = maxNeighborTTL;
+       signal CommandHandler.printNeighbors();
+    }
+
+    void lessNeighborTTL() {
+      int i;
+      for (i = 0; i < NeighborsListSize; i++) {
+            if(Neighbors[i] == 1) {
+                  Neighbors[i] -= 1;
+                  Routing[i][1] = 255;
+                  dbg (NEIGHBOR_CHANNEL, "\t Node %d Dropped from the Network \n", i);
+
+                  // NeighborPing to neighbor we are dropppping
+                  sequenceCounter++;
+                  makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, sequenceCounter, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
+                  call Sender.send(sendPackage, (uint8_t) i);
+            }
+            if (Neighbors[i] > 1) {
+                  Neighbors[i] -= 1;
+            }
+      }
+    }
+
+    void sendToNeighbor(pack *recievedMsg) {
+      if(destNeighbor(recievedMsg)) {
+              dbg(NEIGHBOR_CHANNEL, "\tDeliver to Destination\n");
+              call Sender.send(sendPackage, recievedMsg->dest);
+        } else {
+                //dbg(NEIGHBOR_CHANNEL, "\tTrynna Forward To Neighbors\n");
+              call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+        }
+    }
+
+    bool destNeighbor(pack *recievedMsg){
+      if(Neighbors[recievedMsg->dest] > 0)
+          return 1;
+      return 0;
+    }
+
+    void scanForNeighbors(){
+      int i;
+      dbg(NEIGHBOR_CHANNEL, "Currently Scanning for Neighbors\n");
+      if (!initialized) {
+             sequenceCounter++;
+             makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, sequenceCounter, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
+             call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+      } else  {
+             lessNeighborTTL();
+      }
+    }
+
+    /*
+    void discoverNeighbors(){
+      pack Pack; //Packet to be sent to neighbors
+      char* message; //increase the access counter
+      accessCounter++;
+      dbg(NEIGHBOR_CHANNEL, "Neighbors accessed, %d is checking.\n", TOS_NODE_ID); //check to see if neighbors have been found at all
+      if (!(call NeighborsList.isEmpty())) {
+        uint16_t length = call NeighborsList.size();
+        uint16_t pings = 0;
+        Neighbor NeighborNode;
+        uint16_t i = 0;
+        Neighbor temp; //increase the number of pings in the neighbors in the list
+        for (i = 0; i < length; i++){
+          temp = call NeighborsList.get(i);
+          temp.pingNumber = temp.pingNumber + 1;
+          pings = temp.pingNumber;
+          dbg(ROUTING_CHANNEL, "Pings at %d: %d\n", temp.Node, pings);
+          if (pings > 3){ //drop neighbor if greater than 3 pings
+            NeighborNode = call NeighborsList.removeFromList(i);
+            dbg(NEIGHBOR_CHANNEL, "Node %d dropped due to more than 3 pings\n", NeighborNode.Node);
+            call NeighborsDropped.pushfront(NeighborNode);
+            i--;
+            length--;
+          }
+        }
+      }
+      //ping the list of Neighbors
+      message = "Pinged Neighbors List\n";
+      makePack(&Pack, TOS_NODE_ID, AM_BROADCAST_ADDR, 2, PROTOCOL_PING, 1, (uint8_t*) message, (uint8_t) sizeof(message));
+      pushPack(Pack); //add the packet to the packet list
+      call Sender.send(Pack, AM_BROADCAST_ADDR);
+    } */
+
+    void initializeRT() {
+        int i, j, neighbor;
+        bool contains;
+        dbg(ROUTING_CHANNEL, "\tMOTE(%d) Initializing Routing Table\n");
+
+        // Setting all the Nodes in our pool/Routing table to  MAX_HOP and setting their nextHop to our emlpty first cell
+        for(i = 1; i < 20; i++) {
+                Routing[i][0] = i;
+                Routing[i][1] = 255;
+                Routing[i][2] = 0;
         }
 
-        void sendTableToNeighbors() {
-                int i;
-                for (i = 1; i < NeighborListSize; i++)
-                    if(NeighborList[i] > 0)
-                        splitHorizon((uint8_t)i); /* I am sending out counter i because that is the node ID and the actual value is the TTL */
+        // Setting the cost for SELF
+        Routing[TOS_NODE_ID][0] = TOS_NODE_ID;
+        Routing[TOS_NODE_ID][1] = 0;
+        Routing[TOS_NODE_ID][2] = TOS_NODE_ID;
+
+        // Setting the cost to all my neighbors
+        for(j = 1; j < NeighborsListSize; j++) {
+                 if(Neighbors[j] > 0)
+                      insertRT(j, 1, j);
         }
+        // dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~initialize\n", TOS_NODE_ID);
+        signal CommandHandler.printNeighbors();
+   }
 
-        /* // First we exclude unset values, and  insert values that have a lesser cost or inser values that have the same nextHop/TOS_NODE_ID/ anf nodeID is not mine
-        if ((nextHop != 0 || cost != 255) && (((cost + 1) < routing[node][1]) ||
-        (nextHop == routing[node][2] && node == routing[node][0] && node != TOS_NODE_ID))) {
-                routing[node][0] = node;
-                routing[node][1] = cost + 1;
-                routing[node][2] = src;
-                alteredRoute = TRUE;*/
+   void insertRT(uint8_t dest, uint8_t cost, uint8_t nextHop) {
+        //input data into tuple
+        Routing[dest][0] = dest;
+        Routing[dest][1] = cost;
+        Routing[dest][2] = nextHop;
+        dbg(ROUTING_CHANNEL, "Inserting into Routing Table dest: %d, cost: %d, next: %d \n", dest, cost, nextHop);
+  }
 
-        bool mergeRoute(uint8_t* newRoute, uint8_t src){
-             int node, cost, nextHop, i, j;
-             bool alteredRoute = FALSE;
-             /* dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~MR\n", TOS_NODE_ID);
-             signal CommandHandler.printNeighbors(); */
-             /* dbg(GENERAL_CHANNEL, "\t~~~~~~~Mote %d's Incoming Routing Table~~~~~~~\n", src);
-             dbg(GENERAL_CHANNEL, "\tDest\tCost\tNext Hop:\n");
-             // Here we read the first 7 indexes of the Incoming table
-             for (i = 0; i < 7; i++) {
-                     // There is no node with an TOS_NODE_ID so we exclude it from the print
-                  if(*(newRoute+(i * 3)) != 0)
-                         dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", *(newRoute+(i * 3)), *(newRoute+(i * 3) + 1), *(newRoute+(i * 3) + 2));
-             } */
+  void sendRT() {
+      int i;
+      for (i = 1; i < NeighborsListSize; i++)
+        if(Neighbors[i] > 0)
+          splitHorizon((uint8_t)i);
+  }
 
-             // Using double forLoop instead of one, outer Iterated through routing, inner going through newRoute
-            for (i = 0; i < 20; i++) {
-                    for (j = 0; j < 7; j++) {
-                            // Saving values for cleaner Code
-                            node = *(newRoute + (j * 3));
-                            cost = *(newRoute + (j * 3) + 1);
-                            nextHop = *(newRoute + (j * 3) + 2);
+  bool mergeRoute(uint8_t *newRoute, uint8_t src) {
 
-                            if (node == routing[i][0]) {
-                                    if ((cost+1)<routing[i][1]) {
-                                            /* dbg(GENERAL_CHANNEL, "\tRewriting route for node %d: %d < %d ---------------------\n", node, cost + 1, routing[i][1]); */
-                                            routing[i][0] = node;
-                                            routing[i][1] = cost + 1;
-                                            routing[i][2] = src;
+    int node, cost, next, i, j;
+    bool diffRoute = FALSE;
 
-                                            alteredRoute = TRUE;
-                                    }
-                            }
-                            //signal CommandHandler.printRouteTable();
-                            // Making sure the cost to us is still 0
-                            /* if (TOS_NODE_ID == routing[i][0]) {
-                                    routing[i][0] = TOS_NODE_ID;
-                                    routing[i][1] = 0;
-                                    routing[i][2] = TOS_NODE_ID;
-                            } */
+    for (i = 0; i < 20; i++) {
+        for (j = 0; j < 7; j++) {
+            // Saving values for cleaner Code
+            node = *(newRoute + (j * 3));
+            cost = *(newRoute + (j * 3) + 1);
+            next = *(newRoute + (j * 3) + 2);
+
+            if (node == Routing[i][0]) {
+                    if ((cost+1)<Routing[i][1]) {
+                            Routing[i][0] = node;
+                            Routing[i][1] = cost + 1;
+                            Routing[i][2] = src;
+
+                            diffRoute = TRUE;
                     }
             }
-
-             // When inserting the partitioned DV tables to ours we want to iterate through all of the notes to compare them to our table
-             /* for(i = 0; i < 20; i++) {
-                     // Saving values for cleaner Code
-                     node = *(newRoute + (i * 3));
-                     cost = *(newRoute + (i * 3) + 1);
-                     nextHop = *(newRoute + (i * 3) + 2);
-                     //This should jump to the node we should be on, this doesnt work cause we are using i as the comparator for our incoming table
-                     if (i != node && node != 0) {
-                             j = node;
-                     } else {
-                             j = i;
-                     }
-                     // These are unset rows in out new table
-                     if (node == routing[j][0] && nextHop !=0 && cost != 255) {
-                             //dbg(GENERAL_CHANNEL, "\t Mote %d  Being Evaluated for Shorter Cost---------------------\n", node);
-                             if ((cost + 1) < routing[j][1]) {
-                                  dbg(GENERAL_CHANNEL, "\tRewriting route for node %d: %d < %d ---------------------\n", node, cost + 1, routing[j][1]);
-                                     routing[j][0] = node;
-                                     routing[j][1] = cost + 1;
-                                     routing[j][2] = src;
-                                     alteredRoute = TRUE;
-                                     signal CommandHandler.printRouteTable();
-                             }
-                     }
-                     // Making sure the cost to us is still 0
-                     if (TOS_NODE_ID == routing[i][0]) {
-                             routing[i][0] = TOS_NODE_ID;
-                             routing[i][1] = 0;
-                             routing[i][2] = TOS_NODE_ID;
-                     }
-             } */
-             return alteredRoute;
+           signal CommandHandler.printRouteTable();
         }
+    }
 
+    return diffRoute;
 
-        // Used when sending DV Tables to Neighbors, nextHop is the Neighbor we are sending to
-        void splitHorizon(uint8_t nextHop){
-                int i, j;
-                // Using two pointer to keep track of our first node
-                uint8_t* startofPoison;
-                uint8_t* poisonTbl = NULL;
+  }
 
-                // Allocating size to store the item
-                poisonTbl = malloc(sizeof(routing));
-                startofPoison = malloc(sizeof(routing));
+  void splitHorizon(uint8_t nextHop) {
 
-                // Copying routing table data bit-by-bit onto poisonTbl and memory location of the start of Neighbor
-                memcpy(poisonTbl, &routing, sizeof(routing));
-                startofPoison = poisonTbl;
+    int i, j;
 
-                /* dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~sH\n", TOS_NODE_ID);
-                signal CommandHandler.printNeighbors(); */
+    //The below values will keep track of the first node
+    uint8_t* start;
+    uint8_t* poisonTable = NULL;
+    poisonTable = malloc(sizeof(Routing));
+    start = malloc(sizeof(Routing));
 
-                //Go through table once and Insert Poison aka MAX_HOP
-                for(i = 0; i < 20; i++)
-                        if (nextHop == i)
-                                *(poisonTbl + (i*3) + 1) = 25;//Poison Reverse --  make the new path cost of where we sending to to MAX HOP NOT 255
+    //Using memcpy to copy routing table information
+    memcpy(poisonTable, &Routing, sizeof(Routing));
+    signal CommandHandler.printRouteTable();
+    start = poisonTable;
 
-             //Since Payload is too big we will send it in parts
-             for(i = 0; i < 20; i++) { // Needs to start at 0 to be able to send the first table
-                  //point to the next portion of the table and send to next node
-                  if(i % 7 == 0){
-                      nodeSeq++;
-                      makePack(&sendPackage, TOS_NODE_ID, nextHop, 2, PROTOCOL_DV, nodeSeq, poisonTbl, sizeof(routing));
-                      call Sender.send(sendPackage, nextHop);
-                  }
-                    poisonTbl += 3;
-             }
+    //Poison Control Implementation: make the path cost the max hop at the moment
+    for(i = 0; i < 20; i++)
+      if (nextHop == i)
+        *(poisonTable + (i*3) + 1) = 25;
 
-             /* dbg(GENERAL_CHANNEL, "\t~~~~~~~Mote %d's Table after splitHorizon, Table sent to %d(Should't be poison reversed)~~~~~~~\n", TOS_NODE_ID, nextHop);
-             dbg(GENERAL_CHANNEL, "\tDest\tCost\tNext Hop:\n");
-             for (i = 0; i < 20; i++) {
-                     dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d\n", routing[i][0], routing[i][1], routing[i][2]);
-             } */
+    //Semd the payload into seperate parts
+    for(i = 0; i < 20; i++) {
+      if(i % 7 == 0){
+          sequenceCounter++;
+          makePack(&sendPackage, TOS_NODE_ID, nextHop, 2, PROTOCOL_DV, sequenceCounter, poisonTable, sizeof(Routing));
+          call Sender.send(sendPackage, nextHop);
+      }
+        poisonTable += 3;
+     }
 
+    // signal CommandHandler.printRouteTable();
 
-             /* dbg(GENERAL_CHANNEL, "\t~~~~~~~Mote %d's Poison Routing Table~~~~~~~\n", TOS_NODE_ID);
-             dbg(GENERAL_CHANNEL, "\tCOMPARE ME COMPARE ME COMPARE ME COMPARE ME\n");
-             dbg(GENERAL_CHANNEL, "\tDest\tCost\tNext Hop:\n");
-             for (i = 0; i < 20; i++) {
-                  dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", i, *(poisonTbl+(i * 3)), *(poisonTbl+(i * 3 + 1)));
-             } */
+  }
 
-
-             //signal CommandHandler.printRouteTable();
-
-
-
-        }
+/*
+  void route(uint16_t Dest, uint16_t Cost, uint16_t Next) {
+		LinkState Link, temp, temp2, temp3, temp4;
+		Neighbor next;
+		uint8_t i, j, k, m, n, p, q, r;
+		bool inTent, inCon;
+		Link.Dest = Dest;
+		Link.Cost = Cost;
+		Link.Next = Next;
+		j = 0;
+		call ConfirmedTable.pushfront(Link);
+		if (Link.Dest != TOS_NODE_ID) {
+			//dbg(ROUTING_CHANNEL, "not TOS_NODE_ID\n");
+			for (i = 0; i < call RoutingTable.size(); i++) {
+				temp = call RoutingTable.get(i);
+				if (temp.Dest == Dest) {
+					for (j = 0; j < temp.NeighborsLength; j++) {
+						if (temp.Neighbors[j] > 0) {
+							inTent = FALSE;
+							inCon = FALSE;
+							if (!call TentativeTable.isEmpty()) {
+								for (k = 0; k < call TentativeTable.size(); k++) {
+									temp2 = call TentativeTable.get(k);
+									if (temp2.Dest == temp.Neighbors[j]) {
+										inTent = TRUE;
+									}
+								}
+							}
+							if (!call ConfirmedTable.isEmpty()) {
+								for (m = 0; m < call ConfirmedTable.size(); m++) {
+									temp3 = call ConfirmedTable.get(m);
+									if (temp3.Dest == temp.Neighbors[j]) {
+										inCon = TRUE;
+									}
+								}
+							}
+							if (!inTent && !inCon) {
+								temp.Dest = temp.Neighbors[j];
+								temp.Cost = Cost+1;
+								temp.Next = Dest;
+								call TentativeTable.pushfront(temp);
+							}
+						}
+					}
+				}
+			}
+		}
+		else {
+			for (j = 0; j < call NeighborsList.size(); j++) {
+				next = call NeighborsList.get(j);
+				for (n = 0; n < call RoutingTable.size(); n++) {
+					temp = call RoutingTable.get(n);
+					if (temp.Dest == next.Node) {
+						inTent = FALSE;
+						inCon = FALSE;
+						if (!call TentativeTable.isEmpty()) {
+							for (k = 0; k < call TentativeTable.size(); k++) {
+								temp2 = call TentativeTable.get(k);
+								if (temp2.Dest == temp.Dest && temp2.Cost > temp.Cost) {
+									temp4 = call TentativeTable.removeFromList(k);
+									temp4.Cost = temp.Cost;
+									temp4.Next = temp.Next;
+									call TentativeTable.pushfront(temp4);
+									inTent = TRUE;
+								}
+								if (temp2.Dest == temp.Dest && temp2.Cost == temp.Cost) {
+									inTent = TRUE;
+								}
+							}
+						}
+						if (!call ConfirmedTable.isEmpty()) {
+							//dbg(ROUTING_CHANNEL, "debugConfirmedTableNotEmpty\n");
+							for (m = 0; m < call ConfirmedTable.size(); m++) {
+								temp3 = call ConfirmedTable.get(m);
+								if (temp3.Dest == temp.Dest) {
+									//dbg(ROUTING_CHANNEL, "ConSetTrue\n");
+									inCon = TRUE;
+								}
+							}
+						}
+						if (!inTent && !inCon) {
+							//dbg(ROUTING_CHANNEL, "noTent and noCon\n");
+							call TentativeTable.pushfront(temp);
+						}
+					}
+				}
+			}
+		}
+		inCon = FALSE;
+		p = call TentativeTable.size();
+		//dbg(ROUTING_CHANNEL, "p = %d\n", p);
+		if (p == 1) {
+			temp4 = call TentativeTable.get(0);
+			call TentativeTable.popback();
+			inCon = FALSE;
+			for (m = 0; m < call ConfirmedTable.size(); m++) {
+				temp3 = call ConfirmedTable.get(m);
+				if (temp4.Dest == temp3.Dest) {
+					inCon = TRUE;
+				}
+				if (!inCon) {
+					if (temp4.Next == temp3.Dest) {
+						temp4.Next = temp3.Next;
+						for (j = 0; j < call NeighborsList.size(); j++) {
+							next = call NeighborsList.get(j);
+							if (temp4.Next == next.Node) {
+								break;
+							}
+						}
+					}
+				}
+			}
+			if (!inCon) {
+				route(temp4.Dest, temp4.Cost, temp4.Next);
+			}
+		}
+		if (p > 1) {
+			//inCon = FALSE;
+			temp4 = call TentativeTable.get(0);
+			q = 0;
+			for (k = 1; k < call TentativeTable.size(); k++) {
+				temp2 = call TentativeTable.get(k);
+				if (temp4.Cost > temp2.Cost) {
+					q = k;
+					temp4 = temp2;
+				}
+				else if (temp4.Cost == temp2.Cost && temp4.Dest > temp2.Dest) {
+					q = k;
+					temp4 = temp2;
+				}
+			}
+			temp2 = call TentativeTable.get(q);
+			for (m = 0; m < call ConfirmedTable.size(); m++) {
+				temp3 = call ConfirmedTable.get(q);
+				if (temp2.Dest == temp3.Dest) {
+					inCon = TRUE;
+				}
+				if (!inCon) {
+					if (temp4.Next == temp3.Dest) {
+						temp4.Next = temp3.Next;
+						for (j = 0; j < call NeighborsList.size(); j++) {
+							next = call NeighborsList.get(j);
+							if (temp4.Next == next.Node) {
+								break;
+							}
+						}
+					}
+				}
+			}
+			if (!inCon) {
+				if (call TentativeTable.size() - 1 > 1 && q == call TentativeTable.size() -1) {
+					call TentativeTable.popback();
+				}
+				else {
+					call TentativeTable.removeFromList(q);
+					call TentativeTable.popback();
+				}
+				route(temp4.Dest, temp4.Cost, temp4.Next);
+			}
+		}
+	} */
 }
