@@ -186,7 +186,7 @@ implementation{
         else if (recievedMsg->dest == TOS_NODE_ID && recievedMsg->protocol == PROTOCOL_DV) {
           dbg(GENERAL_CHANNEL, "Calling Merge Route\n");
           diffRoute = mergeRoute((uint8_t*) recievedMsg->payload, (uint8_t) recievedMsg->src);
-        //  signal CommandHandler.printRouteTable();
+          signal CommandHandler.printRouteTable();
           if(diffRoute){
             sendRT();
           }
