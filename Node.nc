@@ -664,7 +664,12 @@ implementation{
                             diffRoute = TRUE;
                     }
             }
-           signal CommandHandler.printRouteTable();
+          // signal CommandHandler.printRouteTable();
+          if (TOS_NODE_ID == Routing[i][0]){
+            Routing[i][0] = TOS_NODE_ID;
+            Routing[i][1] = 0;
+            Routing[i][2] = TOS_NODE_ID;
+          }
         }
     }
 
