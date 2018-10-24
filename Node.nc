@@ -602,6 +602,7 @@ implementation{
       call Sender.send(Pack, AM_BROADCAST_ADDR);
     } */
 
+    //Routing Table stuff 
     void initializeRT() {
         int i, j, neighbor;
         bool contains;
@@ -625,7 +626,7 @@ implementation{
                       insertRT(j, 1, j);
         }
         // dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~initialize\n", TOS_NODE_ID);
-        signal CommandHandler.printNeighbors();
+      //  signal CommandHandler.printNeighbors();
    }
 
    void insertRT(uint8_t dest, uint8_t cost, uint8_t nextHop) {
@@ -656,7 +657,7 @@ implementation{
             next = *(newRoute + (j * 3) + 2);
 
             if (node == Routing[i][0]) {
-                    if ((cost+1)<Routing[i][1]) {
+                    if ((cost + 1) < Routing[i][1]) {
                             Routing[i][0] = node;
                             Routing[i][1] = cost + 1;
                             Routing[i][2] = src;
