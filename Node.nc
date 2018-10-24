@@ -47,6 +47,7 @@ module Node{
 
 implementation{
 
+    pack sendPackage;
     uint16_t sequenceCounter = 0;             //Create a sequence counter
   //uint16_t accessCounter = 0;               //Create an access counter
     uint8_t maxHops = 18;
@@ -55,7 +56,7 @@ implementation{
     uint8_t Neighbors[19];
     uint8_t Routing[255][3];
 
-    pack sendPackage;
+
     bool isFired = FALSE;
     bool initialized = FALSE;
 
