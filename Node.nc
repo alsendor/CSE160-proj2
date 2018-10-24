@@ -527,7 +527,7 @@ implementation{
       for (i = 0; i < NeighborsListSize; i++) {
             if(Neighbors[i] == 1) {
                   Neighbors[i] -= 1;
-                  Routing[i][1] = 255;
+                //  Routing[i][1] = 255;
                   dbg (NEIGHBOR_CHANNEL, "\t Node %d Dropped from the Network \n", i);
 
                   // NeighborPing to neighbor we are dropppping
@@ -602,7 +602,7 @@ implementation{
       call Sender.send(Pack, AM_BROADCAST_ADDR);
     } */
 
-    //Routing Table stuff 
+    //Routing Table stuff
     void initializeRT() {
         int i, j, neighbor;
         bool contains;
