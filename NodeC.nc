@@ -37,7 +37,7 @@ Node.tableTimer -> tableTimerC;
 Node.Timer -> TimerC;
 
 components RandomC as Random;
-Node.Random -> RandomC;
+Node.Random -> Random;
 
 components new ListC(pack, 64) as PackListC;
 Node.PackList -> PackListC;
