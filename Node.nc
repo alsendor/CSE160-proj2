@@ -116,7 +116,7 @@ implementation{
     call AMControl.start();
 
     Tinitial = 500 + (call Random.rand32() % 1000);
-    Tinterval = 2500 + (call Random.rand32() % 10000);
+    Tinterval = 25000 + (call Random.rand32() % 10000);
     call Timer.startPeriodicAt(Tinitial, Tinterval);
 
     dbg(GENERAL_CHANNEL, "Booted\n");
@@ -133,6 +133,7 @@ implementation{
 
       event void AMControl.stopDone(error_t err){}
 
+        //Handles recieved packs
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
       bool diffRoute = FALSE;
       pack *recievedMsg;
