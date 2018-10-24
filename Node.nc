@@ -103,7 +103,7 @@ implementation{
        if (initialized == FALSE) {
          initializeRT();
          initialized = TRUE;
-      //   signal CommandHandler.printNeighbors();
+         signal CommandHandler.printNeighbors();
          signal CommandHandler.printRouteTable();
        }
        else {
