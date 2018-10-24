@@ -36,10 +36,10 @@ Node.CommandHandler -> CommandHandlerC;
 Node.tableTimer -> tableTimerC;
 Node.Timer -> TimerC;
 
-components RandomC as RandomC;
+components RandomC as Random;
 Node.Random -> RandomC;
 
-components new ListC(pack, 21) as PackListC;
+components new ListC(pack, 64) as PackListC;
 Node.PackList -> PackListC;
 
 
