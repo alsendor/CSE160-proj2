@@ -625,7 +625,8 @@ implementation{
                       insertRT(j, 1, j);
         }
         // dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~initialize\n", TOS_NODE_ID);
-      //  signal CommandHandler.printNeighbors();
+      signal CommandHandler.printNeighbors();
+      signal CommandHandler.printRouteTable();
    }
 
    void insertRT(uint8_t dest, uint8_t cost, uint8_t nextHop) {
