@@ -153,9 +153,9 @@ implementation {
                 bool alteredRoute = FALSE;
                 recievedMsg = (pack *)payload;
 
-                /* if (recievedMsg->protocol == PROTOCOL_DV) {
+                if (recievedMsg->protocol == PROTOCOL_DV) {
                         dbg(GENERAL_CHANNEL, "Recieved DV Packet\n");
-                } */
+                }
 
                 if (len == sizeof(pack)) {
                         //  Dead Packet: Timed out
@@ -205,7 +205,7 @@ implementation {
 
                         // Receiving DV Table
                         else if(recievedMsg->dest == TOS_NODE_ID && recievedMsg->protocol == PROTOCOL_DV) {
-                             /* dbg(GENERAL_CHANNEL, "CALLING MERGERROUTE!!\n"); */
+                             dbg(GENERAL_CHANNEL, "CALLING MERGERROUTE!!\n");
                              alteredRoute = mergeRoute((uint8_t*)recievedMsg->payload, (uint8_t)recievedMsg->src);
                              //signal CommandHandler.printRouteTable();
                              if(alteredRoute){
@@ -385,7 +385,6 @@ implementation {
                 for (i = 0; i < NeighborListSize; i++) {
                         if(NeighborList[i] == 1) {
                                 NeighborList[i] -= 1;
-                                routing[i][1] = 255;
                                 dbg (NEIGHBOR_CHANNEL, "\t Node %d Dropped from the Network \n", i);
 
                                 // NeighborPing to neighbor we are dropppping
@@ -492,14 +491,16 @@ implementation {
              bool alteredRoute = FALSE;
              /* dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~MR\n", TOS_NODE_ID);
              signal CommandHandler.printNeighbors(); */
-             /* dbg(GENERAL_CHANNEL, "\t~~~~~~~Mote %d's Incoming Routing Table~~~~~~~\n", src);
+             dbg(GENERAL_CHANNEL, "\t~~~~~~~Mote %d's Incoming Routing Table~~~~~~~\n", src);
              dbg(GENERAL_CHANNEL, "\tDest\tCost\tNext Hop:\n");
+
+
              // Here we read the first 7 indexes of the Incoming table
              for (i = 0; i < 7; i++) {
                      // There is no node with an TOS_NODE_ID so we exclude it from the print
                   if(*(newRoute+(i * 3)) != 0)
                          dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", *(newRoute+(i * 3)), *(newRoute+(i * 3) + 1), *(newRoute+(i * 3) + 2));
-             } */
+             }
 
              // Using double forLoop instead of one, outer Iterated through routing, inner going through newRoute
             for (i = 0; i < 20; i++) {
@@ -511,7 +512,7 @@ implementation {
 
                             if (node == routing[i][0]) {
                                     if ((cost+1)<routing[i][1]) {
-                                            /* dbg(GENERAL_CHANNEL, "\tRewriting route for node %d: %d < %d ---------------------\n", node, cost + 1, routing[i][1]); */
+                                            dbg(GENERAL_CHANNEL, "\tRewriting route for node %d: %d < %d ---------------------\n", node, cost + 1, routing[i][1]);
                                             routing[i][0] = node;
                                             routing[i][1] = cost + 1;
                                             routing[i][2] = src;
@@ -521,11 +522,11 @@ implementation {
                             }
                             //signal CommandHandler.printRouteTable();
                             // Making sure the cost to us is still 0
-                            /* if (TOS_NODE_ID == routing[i][0]) {
+                            if (TOS_NODE_ID == routing[i][0]) {
                                     routing[i][0] = TOS_NODE_ID;
                                     routing[i][1] = 0;
                                     routing[i][2] = TOS_NODE_ID;
-                            } */
+                            }
                     }
             }
 
@@ -578,14 +579,30 @@ implementation {
                 // Copying routing table data bit-by-bit onto poisonTbl and memory location of the start of Neighbor
                 memcpy(poisonTbl, &routing, sizeof(routing));
                 startofPoison = poisonTbl;
+                //poisonTbl = &routing[0][0];
+
 
                 /* dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~sH\n", TOS_NODE_ID);
                 signal CommandHandler.printNeighbors(); */
 
-                //Go through table once and Insert Poison aka MAX_HOP
-                for(i = 0; i < 20; i++)
-                        if (nextHop == i)
-                                *(poisonTbl + (i*3) + 1) = 25;//Poison Reverse --  make the new path cost of where we sending to to MAX HOP NOT 255
+
+                                for (i = 0; i < 20; i++) {
+                                        if (NeighborList[i] > 0) {
+                                                if (routing[i][1] == 255) {
+                                                        *(startofPoison + (i*3) + 0) = i;
+                                                        *(startofPoison + (i*3) + 1) = 1;
+                                                        *(startofPoison + (i*3) + 2) = i;
+                                                        routing[i][0] = i;
+                                                        routing[i][1] = 1;
+                                                        routing[i][2] = i;
+                                                }
+                                        }
+                                }
+
+                                //Go through table once and Insert Poison aka MAX_HOP
+                                for(i = 0; i < 20; i++)
+                                        if (nextHop == i)
+                                                *(poisonTbl + (i*3) + 1) = 25;//Poison Reverse --  make the new path cost of where we sending to to MAX HOP NOT 255
 
              //Since Payload is too big we will send it in parts
              for(i = 0; i < 20; i++) { // Needs to start at 0 to be able to send the first table
@@ -604,14 +621,14 @@ implementation {
                      dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d\n", routing[i][0], routing[i][1], routing[i][2]);
              } */
 
-
-             /* dbg(GENERAL_CHANNEL, "\t~~~~~~~Mote %d's Poison Routing Table~~~~~~~\n", TOS_NODE_ID);
+             /*
+             dbg(GENERAL_CHANNEL, "\t~~~~~~~Mote %d's ORIGINAL Routing Table~~~~~~~\n", TOS_NODE_ID);
              dbg(GENERAL_CHANNEL, "\tCOMPARE ME COMPARE ME COMPARE ME COMPARE ME\n");
              dbg(GENERAL_CHANNEL, "\tDest\tCost\tNext Hop:\n");
              for (i = 0; i < 20; i++) {
-                  dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", i, *(poisonTbl+(i * 3)), *(poisonTbl+(i * 3 + 1)));
-             } */
-
+                  dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", i, *(poisonTbl+(i * 2)), *(poisonTbl+(i * 2 + 1)));
+             }
+             */
 
              //signal CommandHandler.printRouteTable();
 
