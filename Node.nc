@@ -661,7 +661,7 @@ implementation{
                             diffRoute = TRUE;
                     }
             }
-           signal CommandHandler.printRouteTable();
+           //signal CommandHandler.printRouteTable();
         }
     }
 
@@ -698,7 +698,7 @@ implementation{
         poisonTable += 3;
      }
 
-    // signal CommandHandler.printRouteTable();
+     signal CommandHandler.printRouteTable();
 
   }
 
