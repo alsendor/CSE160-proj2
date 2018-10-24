@@ -661,7 +661,7 @@ implementation{
                             diffRoute = TRUE;
                     }
             }
-           //signal CommandHandler.printRouteTable();
+           signal CommandHandler.printRouteTable();
         }
     }
 
