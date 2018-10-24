@@ -85,8 +85,8 @@ implementation{
 
     //Period timer function
     event void Timer.fired() {
-       dbg(GENERAL_CHANNEL, "Timer fired!");
        uint32_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
+       dbg(GENERAL_CHANNEL, "Timer fired!");
        dbg(NEIGHBOR_CHANNEL, "Calling Scan For Neighbors\n");
        scanForNeighbors();
        //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
