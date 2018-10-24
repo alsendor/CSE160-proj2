@@ -169,7 +169,7 @@ implementation{
 							found = TRUE;
 						}
 					}
-          signal CommandHandler.printNeighbors()
+          signal CommandHandler.printNeighbors();
 				}
 				//if the packet is sent to find other nodes
 				else if (myMsg->protocol == PROTOCOL_LINKSTATE) {
@@ -203,7 +203,7 @@ implementation{
 							temp.Neighbors[i] = Ntemp.Node;
 						}
 						call RoutingTable.pushfront(temp);
-            signal CommandHandler.printRouteTable()
+            signal CommandHandler.printRouteTable();
 					}
 					if (myMsg->src != TOS_NODE_ID){
 						arr = myMsg->payload;
@@ -251,7 +251,7 @@ implementation{
 								call RoutingTable.pushfront(call Temp.front());
 								call Temp.popfront();
 							}
-              signal CommandHandler.printRouteTable()
+              signal CommandHandler.printRouteTable();
 						}
 						if (call RoutingTable.isEmpty())
 						{
