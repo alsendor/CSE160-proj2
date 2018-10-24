@@ -1,150 +1,243 @@
 /*
- * ANDES Lab - University of California, Merced
- * This class provides the basic functions of a network node.
- *
- * @author UCM ANDES Lab
- * @date   2013/09/03
- *
- */
+* ANDES Lab - University of California, Merced
+* This class provides the basic functions of a network node.
+*
+* @author UCM ANDES Lab
+* @date   2013/09/03
+*
+*/
 #include <Timer.h>
 #include "includes/command.h"
 #include "includes/packet.h"
 #include "includes/CommandMsg.h"
 #include "includes/sendInfo.h"
 #include "includes/channels.h"
-#define INFINITY 65535
 
-//define the type Neighbor with the Node ID and number of pings to it
-typedef nx_struct Neighbor {
+/*typedef nx_struct Neighbor {
    nx_uint16_t Node;
    nx_uint16_t pingNumber;
 }Neighbor;
-
-typedef nx_struct LinkState {
-   nx_uint16_t Dest;
-   nx_uint16_t Cost;
-   nx_uint16_t Next;
-   nx_uint16_t Seq;
-   //nx_uint16_t from;
-   nx_uint8_t Neighbors[64];
-   nx_uint16_t NeighborsLength;
-}LinkState;
-
+*/
 module Node{
-   uses interface Boot;
 
-   //list of packets to determine if a node has seen or sent this packet before
-   uses interface List<pack> as MarkedPackets;
-   //timer to use to fire packets
-   uses interface Timer<TMilli> as PeriodicTimer;
-   //random number used for timer to make sure it's spaced
-   uses interface Random as Random;
-   //list of neighboring nodes as seen by current node
-   uses interface List<Neighbor> as Neighbors;
-   //list of removed nodes from the neighbor list
-   uses interface List<Neighbor> as NeighborsDropped;
-   //list of nodes and their costs
-   uses interface List<Neighbor> as NeighborCosts;
-   //routing table to be used by nodes
-   uses interface List<LinkState> as RoutingTable;
-   //confirmed table for algo
-   uses interface List<LinkState> as Confirmed;
-   //tentative table for algo
-   uses interface List<LinkState> as Tentative;
-   uses interface List<LinkState> as Temp;
+    uses interface Boot;
+    uses interface SplitControl as AMControl;
+    uses interface Receive;
+    uses interface SimpleSend as Sender;
+    uses interface CommandHandler;
 
-   uses interface Hashmap<int> as nextTable;
+    uses interface List<pack> as PackList;     //Create list of pack called PackList
+/*
+    uses interface List<Neighbor> as NeighborsList; //Create list of neighbors
+    uses interface List<Neighbor> as NeighborsDropped; //Creates list of dropped neighbors
+    uses interface List<Neighbor> as NeighborCosts; //Creates list of neighboring nodes costs
+    uses interface List<LinkState> as RoutingTable; //Link State table used for Routing route
+    uses interface List<LinkState> as ConfirmedTable; //ConfirmedTable table
+    uses interface List<LinkState> as TentativeTable; //TentativeTable Table
+    uses interface Hashmap<int> as nextTable;
+*/
 
-   uses interface SplitControl as AMControl;
-   uses interface Receive;
+    uses interface Random as Random;
 
-   uses interface SimpleSend as Sender;
-
-   uses interface CommandHandler;
+    uses interface Timer<TMilli> as Timer;
+    uses interface Timer<TMilli> as tableTimer; //Creates implementation of timer for neighbor periods
 
 }
 
 implementation{
-   pack sendPackage;
-   uint16_t seqCounter = 0;
-   uint16_t accessCounter = 0;
-   uint32_t difference = 0;
-   uint16_t algopush = 0;
-   // Prototypes
-   void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
-   //puts a packet into the list at the top
-   void pushPack(pack Package);
-   //finds a packet in the list
-   bool findPack(pack *Package);
-   //access neighbor list
-   void accessNeighbors();
-   //starts to flood the LSP packet
-   void floodLSP();
-   //runs dijkstra's algorithm for shortest path
-   void algorithm();
-   void findNext();
-   //void algorithm(uint16_t Dest, uint16_t Cost, uint16_t Next, uint8_t * Nbors, uint16_t Length);
 
-   void printLSP();
+    uint16_t sequenceCounter = 0;             //Create a sequence counter
+  //uint16_t accessCounter = 0;               //Create an access counter
+    uint8_t maxHops = 18;
+    uint8_t NeighborsListSize = 19;
+    uint8_t maxNeighborTTL = 20;
+    uint8_t Neighbors[19];
+    uint8_t Routing[255][3];
 
-   event void Boot.booted(){
-      uint32_t initial;
-      uint32_t change;
-      call AMControl.start();
-      dbg(GENERAL_CHANNEL, "Booted\n");
-      //create an initial time to start firing from between 0-999 milliseconds
-      initial = call Random.rand32() % 1000;
-      //change is the interval to fire between each fire from 10000-25000 milliseconds
-      change = 10000 + (call Random.rand32() % 15000);
-      //start the timer
-      call PeriodicTimer.startPeriodicAt(initial, change);
-      //dbg(GENERAL_CHANNEL, "Timer started at %d, firing interval %d\n", initial, change);
-   }
+    pack sendPackage;
+    bool isFired = FALSE;
+    bool initialized = FALSE;
 
-   event void AMControl.startDone(error_t err){
+    void discoverNeighbors();
+    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t Protocol, uint16_t seq, uint8_t *payload, uint8_t length);
+
+    void packLog(pack *Package);           //Function to create a log of packs
+    bool packSeen(pack *Package);            //Function to check for previously seen packs
+
+    //void route(uint16_t Dest, uint16_t Cost, uint16_t Next);
+
+    //Functions for handling neighbor nodes
+    void route();
+    void addNeighbor(uint8_t Neighbor);
+    void lessNeighborTTL();
+    void sendToNeighbor(pack *recievedMsg);
+    bool destNeighbor(pack *recievedMsg);
+    void scanForNeighbors();
+
+    //Distance Vector table initialize, insert new, merge route, split horizon, and send table to all neighbors
+    void initializeRT();
+    void insertRT(uint8_t dest, uint8_t cost, uint8_t nextHop);
+    bool mergeRoute(uint8_t *newRoute, uint8_t src);
+    void splitHorizon(uint8_t nextHop);
+    void sendRT();
+
+    //Period timer function
+    event void Timer.fired() {
+       uint32_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
+       dbg(NEIGHBOR_CHANNEL, "Calling Scan For Neighbors\n");
+       scanForNeighbors();
+       //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+       //dbg(NEIGHBOR_CHANNEL,"Neighboring nodes %s\n", Neighbor);
+
+       Tinitial = 20000 + (call Random.rand32() % 1000);
+       Tinterval = 25000 + (call Random.rand32() % 10000);
+
+       if (!isFired) {
+         call tableTimer.startPeriodicAt(Tinitial, Tinterval);
+         isFired = TRUE;
+       }
+     }
+
+    //Table timer function
+     event void tableTimer.fired() {
+       if (initialized == FALSE) {
+         initializeRT();
+         initialized = TRUE;
+         signal CommandHandler.printNeighbors();
+         signal CommandHandler.printRouteTable();
+       }
+       else {
+         sendRT();
+       }
+     }
+
+    event void Boot.booted() {
+    uint8_t Tinitial, Tinterval;
+    call AMControl.start();
+
+    Tinitial = 500 + (call Random.rand32() % 1000);
+    Tinterval = 25000 + (call Random.rand32() % 10000);
+    call Timer.startPeriodicAt(Tinitial, Tinterval);
+
+    dbg(GENERAL_CHANNEL, "Booted\n");
+  }
+
+    event void AMControl.startDone(error_t err){
       if(err == SUCCESS){
-         dbg(GENERAL_CHANNEL, "Radio On\n");
-      }else{
-         //Retry until successful
-         call AMControl.start();
+          dbg(GENERAL_CHANNEL, "Radio On\n");
       }
-   }
+      else {
+          call AMControl.start(); //Retry until success
+          }
+      }
 
-   event void PeriodicTimer.fired() {
-	accessNeighbors();
-	if (accessCounter > 1 && accessCounter % 3 == 0 && accessCounter < 16){
-		floodLSP();
-		//algorithm(TOS_NODE_ID, 0, 0, 0, call Neighbors.size());
-		if (TOS_NODE_ID == 1)
-			printLSP();
-		//findNext();
-	}
-	if (accessCounter > 1 && accessCounter % 20 == 0 && accessCounter < 61)
-		algorithm();
-   }
+      event void AMControl.stopDone(error_t err){}
 
+        //Handles recieved packs
+    event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
+      pack* recievedMsg;
+                bool alteredRoute = FALSE;
+                recievedMsg = (pack *)payload;
 
-   event void AMControl.stopDone(error_t err){}
+                if (len == sizeof(pack)) {
+                        //  Dead Packet: Timed out
+                        if (recievedMsg->TTL == 0) {
+                                dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Dead of old age\n", recievedMsg->src, recievedMsg->dest);
+                                return msg;
+                        }
 
-	event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
-		//dbg(FLOODING_CHANNEL, "Packet Received\n");
-		if(len==sizeof(pack))
-		{
-			LinkState DESTI, DEST;
-			uint16_t NEXT,SEND,x,y;
-			//creates a message with the payload, or message, of the recieved packet
-			pack* myMsg=(pack*) payload;
-			//check to see if this packet needs to be dropped, either through checking to see if the TTL expired, or if it was listed in the list of sent or seen packets
-			if((myMsg->TTL <= 0) || findPack(myMsg)){
-				//drops packet by doing nothing and not sending out a new packet
-			}
-			//else, check to see if the packet is checking for neighbors, deal with it seperately
-			else if(myMsg->dest == AM_BROADCAST_ADDR) {
+                        //  Old Packet: Has been seen
+                        else if (packSeen(recievedMsg)) {
+                                //dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Seen Before\n", recievedMsg->src, recievedMsg->dest);
+                                return msg;
+                        }
+
+                        //  Ping to me
+                        if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == TOS_NODE_ID) {
+                                dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) -------------------------------------------------->>>>Ping: %s\n", recievedMsg->src, recievedMsg->dest,  recievedMsg->payload);
+                                packLog(&sendPackage);
+
+                                // Sending Ping Reply
+                                sequenceCounter++;
+                                makePack(&sendPackage, recievedMsg->dest, recievedMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequenceCounter, (uint8_t*)recievedMsg->payload, len);
+                                packLog(&sendPackage);
+                                call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+
+                                //signal CommandHandler.printNeighbors();
+                                signal CommandHandler.printRouteTable();
+                                return msg;
+                        }
+
+                        //  Ping Reply to me
+                        else if (recievedMsg->protocol == PROTOCOL_PINGREPLY && recievedMsg->dest == TOS_NODE_ID) {
+                                dbg(FLOODING_CHANNEL, "\tPackage(%d,%d) -------------------------------------------------->>>>Ping Reply: %s\n", recievedMsg->src, recievedMsg->dest, recievedMsg->payload);
+                                packLog(&sendPackage);
+                                return msg;
+                        }
+
+                        //  Neighbor Discovery: Timer
+                        else if (recievedMsg->protocol == PROTOCOL_PING && recievedMsg->dest == AM_BROADCAST_ADDR) {
+                                //dbg(GENERAL_CHANNEL, "\tNeighbor Discovery Ping Recieved\n");
+                                // Log as neighbor
+                                //dbg(GENERAL_CHANNEL, "Neighbor Discovery packet SRC: %d\n", recievedMsg->src);
+                                addNeighbor(recievedMsg->src);
+                                packLog(recievedMsg);
+                                return msg;
+                        }
+
+                        // Receiving DV Table
+                        else if(recievedMsg->dest == TOS_NODE_ID && recievedMsg->protocol == PROTOCOL_DV) {
+                             /* dbg(GENERAL_CHANNEL, "CALLING MERGERROUTE!!\n"); */
+                             alteredRoute = mergeRoute((uint8_t*)recievedMsg->payload, (uint8_t)recievedMsg->src);
+                             //signal CommandHandler.printRouteTable();
+                             if(alteredRoute){
+                                  sendRT();
+                             }
+                             return msg;
+                        }
+
+                        // Relaying Packet: Not for us
+                        else if (recievedMsg->dest != TOS_NODE_ID && recievedMsg->dest != AM_BROADCAST_ADDR) {
+                                //dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Relay\n", recievedMsg->src, recievedMsg->dest);
+
+                                // Forward and logging package
+                                recievedMsg->TTL--;
+                                makePack(&sendPackage, recievedMsg->src, recievedMsg->dest, recievedMsg->TTL, recievedMsg->protocol, recievedMsg->seq, (uint8_t*)recievedMsg->payload, len);
+                                packLog(&sendPackage);
+
+                                /**********FOR LATER: Reduce Spamming the network**************
+                                 * Need to use node-specific neighbors for destination
+                                 * rather than AM_BROADCAST_ADDR after we implement
+                                 * neighbor discovery
+                                 */
+                                //signal CommandHandler.printNeighbors();
+                                sendToNeighbor(&sendPackage);
+                                return msg;
+                        }
+
+                        // If Packet get here we have not expected it and it will fail
+                        dbg(GENERAL_CHANNEL, "\tUnknown Packet Type %d\n", len);
+                        return msg;
+                }// End of Currupt if statement
+
+                dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Currrupted", recievedMsg->src, recievedMsg->dest);
+                return msg;
+}
+
+  event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
+    sequenceCounter++;
+    dbg(GENERAL_CHANNEL, "\tPackage(%d,%d) Ping Sent\n", TOS_NODE_ID, destination);
+    makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL + 5, PROTOCOL_PING, sequenceCounter, payload, PACKET_MAX_PAYLOAD_SIZE);
+    packLog(&sendPackage);
+    call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+  }
+/*
+    else if(myMsg->dest == AM_BROADCAST_ADDR) { //check if looking for neighbors
 				bool found;
 				bool match;
 				uint16_t length;
 				uint16_t i = 0;
-				Neighbor Neighbor1,Neighbor2,NeighborCheck;
+				Neighbor neighbor1,  neighbor2, neighborCheck;
 				//if the packet is sent to ping for neighbors
 				if (myMsg->protocol == PROTOCOL_PING){
 					//send a packet that expects replies for neighbors
@@ -152,24 +245,23 @@ implementation{
 					makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_PINGREPLY, myMsg->seq, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
 					pushPack(sendPackage);
 					call Sender.send(sendPackage, myMsg->src);
-				}
-				//if the packet is sent to ping for replies
+		      }
+          //if the packet is sent to ping for replies
 				else if (myMsg->protocol == PROTOCOL_PINGREPLY){
 					//update ping number, search and see if the neighbor was found
 					//dbg(NEIGHBOR_CHANNEL, "Packet recieved from %d, replying\n", myMsg->src);
-					length = call Neighbors.size();
+					length = call NeighborsList.size();
 					found = FALSE;
 					for (i = 0; i < length; i++){
-						Neighbor2 = call Neighbors.get(i);
-						//dbg(GENERAL_CHANNEL, "Pings at %d = %d\n", Neighbor2.Node, Neighbor2.pingNumber);
-						if (Neighbor2.Node == myMsg->src) {
+						neighbor2 = call NeighborsList.get(i);
+						//dbg(GENERAL_CHANNEL, "Pings at %d = %d\n", neighbor2.Node, neighbor2.pingNumber);
+						if (neighbor2.Node == myMsg->src) {
 							//dbg(NEIGHBOR_CHANNEL, "Node found, adding %d to list\n", myMsg->src);
 							//reset the ping number if found to keep it from being dropped
-							Neighbor2.pingNumber = 0;
+							neighbor2.pingNumber = 0;
 							found = TRUE;
 						}
 					}
-          signal CommandHandler.printNeighbors();
 				}
 				//if the packet is sent to find other nodes
 				else if (myMsg->protocol == PROTOCOL_LINKSTATE) {
@@ -177,97 +269,89 @@ implementation{
 					LinkState LSP;
 					LinkState temp;
 					Neighbor Ntemp;
-					bool end, from, good, found, push;
+					bool end, from, good;
 					uint16_t j,size,k;
 					uint16_t count;
 					uint16_t* arr;
-					//bool same;
-					//bool replace;
+					bool same;
+					bool replace;
 					count = 0;
 					end = TRUE;
 					from = FALSE;
 					good = TRUE;
 					found = FALSE;
-					push = FALSE;
 					i = 0;
-					if(call RoutingTable.isEmpty())
-					{
-						temp.Dest = TOS_NODE_ID;
-						temp.Cost = 0;
-						temp.Next = TOS_NODE_ID;
-						temp.Seq = 0;
-						temp.NeighborsLength = call Neighbors.size();
-						for(i = 0; i < temp.NeighborsLength; i++)
-						{
-							Ntemp = call Neighbors.get(i);
-							temp.Neighbors[i] = Ntemp.Node;
-						}
-						call RoutingTable.pushfront(temp);
-            signal CommandHandler.printRouteTable();
-					}
 					if (myMsg->src != TOS_NODE_ID){
 						arr = myMsg->payload;
 						size = call RoutingTable.size();
 						LSP.Dest = myMsg->src;
 						LSP.Seq = myMsg->seq;
 						LSP.Cost = MAX_TTL - myMsg->TTL;
-						///if (TOS_NODE_ID == 1)
-							//dbg(GENERAL_CHANNEL, "myMsg->TTL is %d, LSP.Cost is %d, good is %d, from %d\n", myMsg->TTL, LSP.Cost, good, myMsg->src);
-						i = 0;
-						count = 0;
-						while (arr[i] > 0) {
+						//dbg(GENERAL_CHANNEL, "myMsg->TTL is %d, LSP.Cost is %d, good is %d\n", myMsg->TTL, LSP.Cost, good);
+						if (!call RoutingTable.isEmpty()){
+							dbg(GENERAL_CHANNEL, "list before removal loop\n");
+							printLSP();
+							for (i = 0; i < call RoutingTable.size(); i++){
+								dbg(GENERAL_CHANNEL, "RoutingTable.size() is %d\n", call RoutingTable.size());
+								temp = call RoutingTable.get(i);
+								if ((temp.Dest == LSP.Dest) && (LSP.Seq >= temp.Seq))
+								{
+									dbg(ROUTING_CHANNEL, "Deleting %d and replaced %d, i is %d\n",temp.Dest, LSP.Dest, i);
+									if((i+1) == size)
+									{
+										dbg(GENERAL_CHANNEL, "removing using popback()\n");
+										call RoutingTable.popback();
+									}
+									else
+									{
+										dbg(GENERAL_CHANNEL, "removing using removeFromList()\n");
+										k = i;
+										call RoutingTable.removeFromList(k);
+									}
+								}
+							}
+							i=0;
+							while(!call RoutingTable.isEmpty())
+							{
+								temp = call RoutingTable.front();
+								if((temp.Dest == LSP.Dest) && (LSP.Seq >= temp.Seq))
+								{
+									call RoutingTable.popfront();
+								}
+								else
+								{
+									call TentativeTable.pushfront(call RoutingTable.front());
+									call RoutingTable.popfront();
+								}
+							}
+							while(!call TentativeTable.isEmpty())
+							{
+								call RoutingTable.pushback(call TentativeTable.front());
+								call TentativeTable.popfront();
+							}
+							dbg(GENERAL_CHANNEL, "list after removal loop\n");
+							printLSP();
+						}
+						i=0;
+						count=0;
+						while(arr[i] > 0)
+						{
 							LSP.Neighbors[i] = arr[i];
+							//dbg(GENERAL_CHANNEL, "arr[i] = %d\n", arr[i]);
 							count++;
 							i++;
 						}
 						LSP.Next = 0;
 						LSP.NeighborsLength = count;
-						if (!call RoutingTable.isEmpty())
-						{
-							while(!call RoutingTable.isEmpty())
-							{
-								temp = call RoutingTable.front();
-								if((temp.Dest == LSP.Dest) && (LSP.Cost <= temp.Cost))
-								{
-									call RoutingTable.popfront();
-									push = TRUE;
-									found = TRUE;
-								}
-								else if((temp.Dest == LSP.Dest) && (LSP.Cost > temp.Cost))
-								{
-									call Temp.pushfront(call RoutingTable.front());
-									call RoutingTable.popfront();
-									push = FALSE;
-									found = TRUE;
-								}
-								else
-								{
-									call Temp.pushfront(call RoutingTable.front());
-									call RoutingTable.popfront();
-								}
-							}
-							while(!call Temp.isEmpty())
-							{
-								call RoutingTable.pushfront(call Temp.front());
-								call Temp.popfront();
-							}
-              signal CommandHandler.printRouteTable();
-						}
-						if (call RoutingTable.isEmpty())
-						{
+						dbg(ROUTING_CHANNEL, "Table for %d: \n", TOS_NODE_ID);
+						//if(good == TRUE)
+						//{
 							call RoutingTable.pushfront(LSP);
-						}
-						else if(found == FALSE)
-						{
-							call RoutingTable.pushfront(LSP);
-						}
-						else if (push == TRUE)
-						{
-							call RoutingTable.pushfront(LSP);
-						}
-						//printLSP();
-						seqCounter++;
-						makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE, seqCounter, (uint8_t *)myMsg->payload, (uint8_t) sizeof(myMsg->payload));
+						//}
+						findNext();
+						printLSP();
+						sequenceCounter++;
+						makePack(&sendPackage, myMsg->src, AM_BROADCAST_ADDR, myMsg->TTL-1, PROTOCOL_LINKSTATE, sequenceCounter, (uint8_t *)myMsg->payload, (uint8_t) sizeof(myMsg->payload));
 						pushPack(sendPackage);
 						call Sender.send(sendPackage, AM_BROADCAST_ADDR);
 					}
@@ -276,13 +360,13 @@ implementation{
 				if (!found && myMsg->protocol != PROTOCOL_LINKSTATE)
 				{
 					//add it to the list, using the memory of a previous dropped node
-					Neighbor1 = call NeighborsDropped.get(0);
+					neighbor1 = call NeighborsDropped.get(0);
 					//check to see if already in list
-					length = call Neighbors.size();
+					length = call NeighborsList.size();
 					for (i = 0; i < length; i++)
 					{
-						NeighborCheck = call Neighbors.get(i);
-						if (myMsg->src == NeighborCheck.Node)
+						neighborCheck = call NeighborsList.get(i);
+						if (myMsg->src == neighborCheck.Node)
 						{
 							match = TRUE;
 						}
@@ -294,410 +378,492 @@ implementation{
 					else
 					{
 						//not in list, so we're going to add it
+            LinkState temp;
 						//dbg(NEIGHBOR_CHANNEL, "%d not found, put in list\n", myMsg->src);
-						//LinkState temp;
-						Neighbor1.Node = myMsg->src;
-						Neighbor1.pingNumber = 0;
-						call Neighbors.pushback(Neighbor1);
-
+						neighbor1.Node = myMsg->src;
+						neighbor1.pingNumber = 0;
+						call NeighborsList.pushback(neighbor1);
 					}
 				}
-			}
- 			//else, check to see if the packet reached it's destination and see what the purpose/protocal of the packet was
-			else if((myMsg->dest == TOS_NODE_ID) && myMsg->protocol == PROTOCOL_PING) {
-				//uint16_t NEXT,x;
-				//LinkState DEST;
-				NEXT = 0;
-				//when protocal = PROTOCAL_PING, the packet was sent as a ping, and not a reply
-				dbg(FLOODING_CHANNEL, "Packet is at destination! Package Payload: %s, Sending PING_REPLY to %d\n", myMsg->payload, myMsg->src);
-				//make another packet that's the reply from the ping
-				makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, seqCounter, (uint8_t *) myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-				//increase the sequence number of the next packet that will be sent
-				seqCounter++;
-				//put the packet into the list
-				pushPack(sendPackage);
+    } else if(myMsg->protocol == 0 && (myMsg->dest == TOS_NODE_ID)) {      //Check if correct protocol is run. Check the destination node ID
+        dbg(FLOODING_CHANNEL, "Packet destination achieved. Package Payload: %s\n", myMsg->payload);    //Return message for correct destination found and its payload.
+        makePack(&sendPackage, TOS_NODE_ID, myMsg->src, MAX_TTL, PROTOCOL_PINGREPLY, sequenceCounter, (uint8_t *) myMsg->payload, sizeof(myMsg->payload));      //Make new pack
+        sequenceCounter++;      //Increment our sequence number
+        pushPack(sendPackage);  //Push the pack again
+        call Sender.send(sendPackage, AM_BROADCAST_ADDR);       //Rebroadcast
+    } else if((myMsg->dest == TOS_NODE_ID) && myMsg->protocol == 1) {   //Check if correct protocol is run. Check the destination node ID
+        dbg(FLOODING_CHANNEL, "Recieved a reply it was delivered from %d!\n", myMsg->src);   //Return message for pingreply and get the source of where it came from
+    } else {
+        makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, sizeof(myMsg->payload));      //make new pack
+        dbg(FLOODING_CHANNEL, "Recieved packet from %d, meant for %d, TTL is %d. Rebroadcasting\n", myMsg->src, myMsg->dest, myMsg->TTL);        //Give data of source, intended destination, and TTL
+        pushPack(sendPackage);          //Push the pack again
+        call Sender.send(sendPackage, AM_BROADCAST_ADDR);       //Rebroadcast
+        }
+    return msg;
+}
+    dbg(GENERAL_CHANNEL, "Unknown Packet Type %d\n", len);
+    return msg;
+}
+    event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
+    dbg(GENERAL_CHANNEL, "PING EVENT \n");
+    makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
+    call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+    }
+*/
 
-				for(x = 0; x < call Confirmed.size(); x++)
-				{
-					DEST = call Confirmed.get(x);
-					if(myMsg->src == DEST.Dest)
-					{
-						NEXT = DEST.Next;
-					}
-				}
-				if(NEXT == 0)
-				{
-					//NEXT = AM_BROADCAST_ADDR;
-				}
-				//send the new packet
-				dbg(ROUTING_CHANNEL, "meant for %d, sending to %d\n", myMsg->src, NEXT);
-				call Sender.send(sendPackage, NEXT);
-			}
-			else if((myMsg->dest == TOS_NODE_ID) && myMsg->protocol == PROTOCOL_PINGREPLY) {
-				//the packet is at the right destination, and it is simply a reply, we can stop sending the packet here
-				dbg(FLOODING_CHANNEL, "Recieved a reply it was delivered from %d!\n", myMsg->src);
-			}
-			else {
-				//uint16_t y,SEND;
-				//LinkState DESTI;
-				SEND = 0;
-				//all else, wrong destination, flood the packet
-				makePack(&sendPackage, myMsg->src, myMsg->dest, myMsg->TTL-1, myMsg->protocol, myMsg->seq, (uint8_t *)myMsg->payload, PACKET_MAX_PAYLOAD_SIZE);
-				pushPack(sendPackage);
-				for(y=0; y < call Confirmed.size(); y++)
-				{
-					DESTI = call Confirmed.get(y);
-					if(myMsg->dest == DESTI.Dest)
-					{
-						SEND = DESTI.Next;
-					}
-				}
-				if(SEND == 0)
-				{
-					//SEND = AM_BROADCAST_ADDR;
-				}
-				dbg(ROUTING_CHANNEL, "meant for %d, sending to %d\n", myMsg->dest, SEND);
-				call Sender.send(sendPackage, SEND);
-			}
-			return msg;
-		}
-		else
-		{
-		//all else, we dunno what the packet was to do
-		dbg(GENERAL_CHANNEL, "Unknown Packet Use, Error with: %d\n", len);
-		return msg;
-		}
-	}
+    //Printing functions
+    event void CommandHandler.printNeighbors(){
 
+      int i, cnt = 0;
+      dbg(GENERAL_CHANNEL, "Neighbors Size: %d\n", NeighborsListSize);
+      for(i = 1; i < (NeighborsListSize); i++) {
+           if(Neighbors[i] > 0){
+                dbg(NEIGHBOR_CHANNEL, "%d -> %d\n", TOS_NODE_ID, i);
+                cnt++;
+           }
+      }
+      if(cnt == 0)
+            dbg(GENERAL_CHANNEL, "Neighbor List is Empty\n");
 
-   event void CommandHandler.ping(uint16_t destination, uint8_t *payload){
-	uint16_t i,next;
-	LinkState temp;
-	next = 0;
-	for(i = 0; i < call Confirmed.size(); i++)
-	{
-		temp = call Confirmed.get(i);
-		if (temp.Dest == destination)
-		{
-			next = temp.Next;
-		}
-	}
-	if(next == 0)
-	{
-		//next = AM_BROADCAST_ADDR;
-	}
-      dbg(GENERAL_CHANNEL, "PING EVENT, destination %d; sending to %d \n", destination, next);
-      makePack(&sendPackage, TOS_NODE_ID, destination, MAX_TTL, 0, 0, payload, PACKET_MAX_PAYLOAD_SIZE);
-      call Sender.send(sendPackage, next);
+   }
+   //Print Routing Table
+    event void CommandHandler.printRouteTable(){
+
+      int i;
+      dbg(GENERAL_CHANNEL, "\t%d's Routing Table\n", TOS_NODE_ID);
+      dbg(GENERAL_CHANNEL, "\tDest\tHop\tCount\n");
+      for (i = 1; i < 20; i++) {
+              dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", Routing[i][0], Routing[i][1], Routing[i][2]);
+      }
+
+    }
+
+    event void CommandHandler.printLinkState(){}
+
+    event void CommandHandler.printDistanceVector(){}
+
+    event void CommandHandler.setTestServer(){}
+
+    event void CommandHandler.setTestClient(){}
+
+    event void CommandHandler.setAppServer(){}
+
+    event void CommandHandler.setAppClient(){}
+
+//Pack handler functions
+    void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
+            Package->src = src;
+            Package->dest = dest;
+            Package->TTL = TTL;
+            Package->seq = seq;
+            Package->protocol = protocol;
+            dbg (GENERAL_CHANNEL, "makePack: Package: src: %d, dest: %d, TTL: %d, seq: %d \n", Package->src, Package->dest, Package->TTL, Package->protocol, Package->seq);
+            memcpy(Package->payload, payload, length);
+    }
+    //Seen packs
+    void packLog(pack *payload) {
+      pack loggedP;
+      uint16_t src = payload->src;
+      uint16_t seq = payload->seq;
+      //Test if list contains the src key & check if its empty
+      if (call PackList.size() == 64) {
+        call PackList.popfront();
+      }
+      dbg (GENERAL_CHANNEL, "Pack Log: Payload: src: %d, dest: %d, TTL: %d, seq: %d \n", payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq);
+      makePack(&loggedP, payload->src, payload->dest, payload->TTL, payload->protocol, payload->seq, (uint8_t*) payload->payload, sizeof(pack));
+      call PackList.pushback(loggedP);
+
+    }
+
+    bool packSeen(pack *packet) {
+      pack store;
+      int x, size;
+      size = call PackList.size();
+
+      if(size > 0) {
+        for (x = 0; x < size; x++) {
+          store = call PackList.get(x);
+          if (store.src == packet->src && store.seq == packet->seq) {
+            dbg (GENERAL_CHANNEL, "PACKSEEN: src: %d, seq: %d \n", packet->src, packet->seq);
+            return 1;
+          }
+        }
+      }
+      return 0;
+    }
+
+  /*  bool findPack(pack *Package) {      //findpack function
+        uint16_t size = call PackList.size();     //get size of the list
+        pack Match;                 //create variable to test for matches
+        uint16_t i = 0;             //initialize variable to 0
+        for (i = 0; i < size; i++) {
+            Match = call PackList.get(i);     //iterate through the list to test for matches
+            if((Match.src == Package->src) && (Match.dest == Package->dest) && (Match.seq == Package->seq)) {   //Check for matches of source, destination, and sequence number
+                return TRUE;
+                }
+            }
+            return FALSE;
+        }
+    void pushPack(pack Package) {   //pushpack function
+        if (call PackList.isFull()) {
+            call PackList.popfront();         //if the list is full, pop off the front
+        }
+        call PackList.pushback(Package);      //continue adding packages to the list
+    }
+*/
+
+//Neighbor Discovery
+
+    void addNeighbor(uint8_t Neighbor) {
+      if(Neighbor == 0)
+          dbg(GENERAL_CHANNEL, "This is the neighbor at Source 0");
+       Neighbors[Neighbor] = maxNeighborTTL;
+       signal CommandHandler.printNeighbors();
+    }
+
+    void lessNeighborTTL() {
+      int i;
+      for (i = 0; i < NeighborsListSize; i++) {
+            if(Neighbors[i] == 1) {
+                  Neighbors[i] -= 1;
+                  Routing[i][1] = 255;
+                  dbg (NEIGHBOR_CHANNEL, "\t Node %d Dropped from the Network \n", i);
+
+                  // NeighborPing to neighbor we are dropppping
+                  sequenceCounter++;
+                  makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, sequenceCounter, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
+                  call Sender.send(sendPackage, (uint8_t) i);
+            }
+            if (Neighbors[i] > 1) {
+                  Neighbors[i] -= 1;
+            }
+      }
+    }
+
+    void sendToNeighbor(pack *recievedMsg) {
+      if(destNeighbor(recievedMsg)) {
+              dbg(NEIGHBOR_CHANNEL, "\tDeliver to Destination\n");
+              call Sender.send(sendPackage, recievedMsg->dest);
+        } else {
+                //dbg(NEIGHBOR_CHANNEL, "\tTrynna Forward To Neighbors\n");
+              call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+        }
+    }
+
+    bool destNeighbor(pack *recievedMsg){
+      if(Neighbors[recievedMsg->dest] > 0)
+          return 1;
+      return 0;
+    }
+
+    void scanForNeighbors(){
+      int i;
+      dbg(NEIGHBOR_CHANNEL, "Currently Scanning for Neighbors\n");
+      if (!initialized) {
+             sequenceCounter++;
+             makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, sequenceCounter, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
+             call Sender.send(sendPackage, AM_BROADCAST_ADDR);
+      } else  {
+             lessNeighborTTL();
+      }
+    }
+
+    /*
+    void discoverNeighbors(){
+      pack Pack; //Packet to be sent to neighbors
+      char* message; //increase the access counter
+      accessCounter++;
+      dbg(NEIGHBOR_CHANNEL, "Neighbors accessed, %d is checking.\n", TOS_NODE_ID); //check to see if neighbors have been found at all
+      if (!(call NeighborsList.isEmpty())) {
+        uint16_t length = call NeighborsList.size();
+        uint16_t pings = 0;
+        Neighbor NeighborNode;
+        uint16_t i = 0;
+        Neighbor temp; //increase the number of pings in the neighbors in the list
+        for (i = 0; i < length; i++){
+          temp = call NeighborsList.get(i);
+          temp.pingNumber = temp.pingNumber + 1;
+          pings = temp.pingNumber;
+          dbg(ROUTING_CHANNEL, "Pings at %d: %d\n", temp.Node, pings);
+          if (pings > 3){ //drop neighbor if greater than 3 pings
+            NeighborNode = call NeighborsList.removeFromList(i);
+            dbg(NEIGHBOR_CHANNEL, "Node %d dropped due to more than 3 pings\n", NeighborNode.Node);
+            call NeighborsDropped.pushfront(NeighborNode);
+            i--;
+            length--;
+          }
+        }
+      }
+      //ping the list of Neighbors
+      message = "Pinged Neighbors List\n";
+      makePack(&Pack, TOS_NODE_ID, AM_BROADCAST_ADDR, 2, PROTOCOL_PING, 1, (uint8_t*) message, (uint8_t) sizeof(message));
+      pushPack(Pack); //add the packet to the packet list
+      call Sender.send(Pack, AM_BROADCAST_ADDR);
+    } */
+
+    void initializeRT() {
+        int i, j, neighbor;
+        bool contains;
+        dbg(ROUTING_CHANNEL, "\tMOTE(%d) Initializing Routing Table\n");
+
+        // Setting all the Nodes in our pool/Routing table to  MAX_HOP and setting their nextHop to our emlpty first cell
+        for(i = 1; i < 20; i++) {
+                Routing[i][0] = i;
+                Routing[i][1] = 255;
+                Routing[i][2] = 0;
+        }
+
+        // Setting the cost for SELF
+        Routing[TOS_NODE_ID][0] = TOS_NODE_ID;
+        Routing[TOS_NODE_ID][1] = 0;
+        Routing[TOS_NODE_ID][2] = TOS_NODE_ID;
+
+        // Setting the cost to all my neighbors
+        for(j = 1; j < NeighborsListSize; j++) {
+                 if(Neighbors[j] > 0)
+                      insertRT(j, 1, j);
+        }
+        // dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~initialize\n", TOS_NODE_ID);
+        signal CommandHandler.printNeighbors();
    }
 
-   event void CommandHandler.printNeighbors(){
-	uint16_t i = 0;
-	uint16_t length = call Neighbors.size();
-	Neighbor beingPrinted;
-	if (length == 0){
-		dbg(NEIGHBOR_CHANNEL, "No neighbors exist\n");
-	}
-	else {
-		for (i = 0; i < length; i++){
-			beingPrinted = call Neighbors.get(i);
-			dbg(NEIGHBOR_CHANNEL, "Neighbor at %d\n", beingPrinted.Node, i);
-			}
-	}
-   }
+   void insertRT(uint8_t dest, uint8_t cost, uint8_t nextHop) {
+        //input data into tuple
+        Routing[dest][0] = dest;
+        Routing[dest][1] = cost;
+        Routing[dest][2] = nextHop;
+        dbg(ROUTING_CHANNEL, "Inserting into Routing Table dest: %d, cost: %d, next: %d \n", dest, cost, nextHop);
+  }
 
-   event void CommandHandler.printRouteTable(){
-	uint16_t k = 0;
-	LinkState temp;
-	dbg(ROUTING_CHANNEL, "Table for %d\n", TOS_NODE_ID);
-	for (k = 0; k < call Confirmed.size(); k++) {
-		temp = call Confirmed.get(k);
-		dbg(ROUTING_CHANNEL, "Dest: %d, Cost: %d, Next: %d\n", temp.Dest, temp.Cost, temp.Next);
-	}
-   }
+  void sendRT() {
+      int i;
+      for (i = 1; i < NeighborsListSize; i++)
+        if(Neighbors[i] > 0)
+          splitHorizon((uint8_t)i);
+  }
 
-   event void CommandHandler.printLinkState(){}
+  bool mergeRoute(uint8_t *newRoute, uint8_t src) {
 
-   event void CommandHandler.printDistanceVector(){}
+    int node, cost, next, i, j;
+    bool diffRoute = FALSE;
 
-   event void CommandHandler.setTestServer(){}
+    for (i = 0; i < 20; i++) {
+        for (j = 0; j < 7; j++) {
+            // Saving values for cleaner Code
+            node = *(newRoute + (j * 3));
+            cost = *(newRoute + (j * 3) + 1);
+            next = *(newRoute + (j * 3) + 2);
 
-   event void CommandHandler.setTestClient(){}
+            if (node == Routing[i][0]) {
+                    if ((cost+1)<Routing[i][1]) {
+                            Routing[i][0] = node;
+                            Routing[i][1] = cost + 1;
+                            Routing[i][2] = src;
 
-   event void CommandHandler.setAppServer(){}
+                            diffRoute = TRUE;
+                    }
+            }
+           signal CommandHandler.printRouteTable();
+        }
+    }
 
-   event void CommandHandler.setAppClient(){}
+    return diffRoute;
 
-   void makePack(pack *Package, uint16_t src, uint16_t dest, uint16_t TTL, uint16_t protocol, uint16_t seq, uint8_t* payload, uint8_t length){
-      Package->src = src;
-      Package->dest = dest;
-      Package->TTL = TTL;
-      Package->seq = seq;
-      Package->protocol = protocol;
-      memcpy(Package->payload, payload, length);
-   }
+  }
 
-   void printLSP()
-   {
-      LinkState temp;
-      uint16_t i, j;
-      for(i=0; i < call RoutingTable.size(); i++)
-		{
-			temp = call RoutingTable.get(i);
-			dbg(GENERAL_CHANNEL, "LSP from %d, Cost: %d, Next: %d, Seq: %d, Count; %d\n", temp.Dest, temp.Cost, temp.Next, temp.Seq, temp.NeighborsLength);
-			for(j=0; j<temp.NeighborsLength; j++)
-			{
-				//dbg(GENERAL_CHANNEL, "Neighbor at %d\n", temp.Neighbors[j]);
-			}
-		}
-		dbg(GENERAL_CHANNEL, "size is %d\n", call RoutingTable.size());
-	}
+  void splitHorizon(uint8_t nextHop) {
 
+    int i, j;
 
+    //The below values will keep track of the first node
+    uint8_t* start;
+    uint8_t* poisonTable = NULL;
+    poisonTable = malloc(sizeof(Routing));
+    start = malloc(sizeof(Routing));
 
+    //Using memcpy to copy routing table information
+    memcpy(poisonTable, &Routing, sizeof(Routing));
+    signal CommandHandler.printRouteTable();
+    start = poisonTable;
 
-   void accessNeighbors() {
-	//make a packet to send to check neighbors
-	pack Pack;
-	//test message to be sent
-	char* message;
-	//increase the access counter
-	accessCounter++;
-	//dbg(NEIGHBOR_CHANNEL, "Neighbors accessed, %d is checking.\n", TOS_NODE_ID);
-	//check to see if neighbors have been found at all
-	if (!(call Neighbors.isEmpty())) {
-		uint16_t length = call Neighbors.size();
-		uint16_t pings = 0;
-		Neighbor NeighborNode;
-		uint16_t i = 0;
-		Neighbor temp;
-		//increase the number of pings in the neighbors in the list. if the ping number is greater than 3, drop the neighbor
-		for (i = 0; i < length; i++){
-			temp = call Neighbors.get(i);
-			temp.pingNumber = temp.pingNumber + 1;
-			pings = temp.pingNumber;
-			//dbg(ROUTING_CHANNEL, "Pings at %d: %d\n", temp.Node, pings);
-			if (pings > 3){
-				NeighborNode = call Neighbors.removeFromList(i);
-				dbg(NEIGHBOR_CHANNEL, "Node %d dropped due to more than 3 pings\n", NeighborNode.Node);
-				call NeighborsDropped.pushfront(NeighborNode);
-				i--;
-				length--;
-			}
-		}
-	}
-	//ping the list of Neighbors
-	message = "pinged neighbors!\n";
-	makePack(&Pack, TOS_NODE_ID, AM_BROADCAST_ADDR, 2, PROTOCOL_PING, 1, (uint8_t*) message, (uint8_t) sizeof(message));
-	//add the packet to the packet list
-	pushPack(Pack);
-	//send the packet
-	call Sender.send(Pack, AM_BROADCAST_ADDR);
-   }
+    //Poison Control Implementation: make the path cost the max hop at the moment
+    for(i = 0; i < 20; i++)
+      if (nextHop == i)
+        *(poisonTable + (i*3) + 1) = 25;
 
-	void pushPack(pack Package) {
-		//check to see if the list is full; if so, remove the oldest node
-		if (call MarkedPackets.isFull()) {
-			call MarkedPackets.popfront();
-		}
-		call MarkedPackets.pushback(Package);
-	}
+    //Semd the payload into seperate parts
+    for(i = 0; i < 20; i++) {
+      if(i % 7 == 0){
+          sequenceCounter++;
+          makePack(&sendPackage, TOS_NODE_ID, nextHop, 2, PROTOCOL_DV, sequenceCounter, poisonTable, sizeof(Routing));
+          call Sender.send(sendPackage, nextHop);
+      }
+        poisonTable += 3;
+     }
 
-	bool findPack(pack *Package) {
-		uint16_t size = call MarkedPackets.size();
-		uint16_t i = 0;
-		pack match;
-		for (i = 0; i < size; i++) {
-			match = call MarkedPackets.get(i);
-			if((match.src == Package->src) && (match.dest == Package->dest) && (match.seq == Package->seq)) {
-				return TRUE;
-			}
-		}
-		return FALSE;
-	}
+    // signal CommandHandler.printRouteTable();
 
-	void floodLSP(){
-		//run to flood LSPs, sending info of this node's direct neighbors
-		pack LSP;
-		LinkState O;
-		//dbg(ROUTING_CHANNEL, "LSP Initial Flood from %d\n", TOS_NODE_ID);
-		//check to see if there are neighbors to at all
-		if (!call Neighbors.isEmpty()){
-			uint16_t i = 0;
-			uint16_t length = call Neighbors.size();
-			uint16_t directNeighbors[length+1];
-			Neighbor temp;
-			//dbg(ROUTING_CHANNEL, "length = %d/n", length);
+  }
 
-			//move the neighbors into the array
-			for (i = 0; i < length; i++) {
-				temp = call Neighbors.get(i);
-				directNeighbors[i] = temp.Node;
-			}
-			//set a negative number to tell future loops to stop!
-			directNeighbors[length] = 0;
-			//directNeighbors[length+1] = TOS_NODE_ID;
-			//dbg(ROUTING_CHANNEL, "this should be 0: %d\n", directNeighbors[length]);
-			//start flooding the packet
-			makePack(&LSP, TOS_NODE_ID, AM_BROADCAST_ADDR, MAX_TTL-1, PROTOCOL_LINKSTATE, seqCounter++, (uint16_t*)directNeighbors, (uint16_t) sizeof(directNeighbors));
-			pushPack(LSP);
-			call Sender.send(LSP, AM_BROADCAST_ADDR);
-		}
-	}
-
-	void removefunction(uint16_t i)
-	{
-		LinkState temp, temp2;
-		temp2 = call Tentative.get(i);
-		while(!call Tentative.isEmpty())
-		{
-			temp = call Tentative.front();
-			if(temp.Dest == temp2.Dest)
-			{
-				call Tentative.popfront();
-			}
-			else
-			{
-				call Temp.pushfront(call Tentative.front());
-				call Tentative.popfront();
-			}
-		}
-		while(!call Temp.isEmpty())
-		{
-			call Tentative.pushback(call Temp.front());
-			call Temp.popfront();
-		}
-	}
-
-	void algorithm()
-	{
-		int nodesize[20];
-		int size = call RoutingTable.size();
-		int mn = 20;
-		int i,j,nexthop,cost[mn][mn],distance[mn],plist[mn];
-		int visited[mn],ncount,mindistance,nextnode;
-
-		int start_node = TOS_NODE_ID;
-		bool aMatrix[mn][mn];
-
-		LinkState temp, temp2;
-
-		for(i = 0; i < mn; i++)
-		{
-			for(j = 0; j < mn; j++)
-			{
-				aMatrix[i][j] = FALSE;
-			}
-		}
-
-		for(i = 0; i < size; i++)
-		{
-			temp = call RoutingTable.get(i);
-			for(j = 0; j < temp.NeighborsLength; j++)
-			{
-				aMatrix[temp.Dest][temp.Neighbors[j]] = TRUE;
-			}
-		}
-
-		for(i = 0; i < mn; i++)
-		{
-			for(j = 0; j < mn; j++)
-			{
-				if(aMatrix[i][j] == FALSE)
-				{
-					cost[i][j] = INFINITY;
-				}
-				else
-				{
-					cost[i][j] = 1;
-				}
-			}
-		}
-		if(TOS_NODE_ID == 1){
-		for(i = 0; i < mn; i++)
-		{
-			for(j = 0; j < mn; j++)
-			{
-				//printf("i=%d, j=%d, cost=%d\n", i, j, cost[i][j]);
-			}
-		}
-		}
-
-		for(i = 0; i < mn; i++)
-		{
-			distance[i] = cost[start_node][i];
-			plist[i] = start_node;
-			visited[i] = 0;
-		}
-
-		distance[start_node] = 0;
-		visited[start_node] = 1;
-		ncount = 1;
-
-		while(ncount < mn - 1)
-		{
-			mindistance = INFINITY;
-			for(i = 0; i < mn; i++)
-			{
-				if(distance[i] <= mindistance && visited[i] == 0)
-				{
-					mindistance = distance[i];
-					nextnode = i;
-				}
-			}
-			visited[nextnode] = 1;
-			for(i = 0; i < mn; i++)
-			{
-				if(visited[i] == 0)
-				{
-					if(mindistance + cost[nextnode][i] < distance[i])
-					{
-						distance[i] = mindistance + cost[nextnode][i];
-						plist[i] = nextnode;
-					}
-				}
-			}
-			ncount++;
-		}
-
-		for(i = 0; i < mn; i++)
-		{
-			nexthop = TOS_NODE_ID;
-			if(distance[i] != INFINITY)
-			{
-				if(i != start_node)
-				{
-					j = i;
-					do {
-						if(j != start_node)
-						{
-							nexthop = j;
+/*
+  void route(uint16_t Dest, uint16_t Cost, uint16_t Next) {
+		LinkState Link, temp, temp2, temp3, temp4;
+		Neighbor next;
+		uint8_t i, j, k, m, n, p, q, r;
+		bool inTent, inCon;
+		Link.Dest = Dest;
+		Link.Cost = Cost;
+		Link.Next = Next;
+		j = 0;
+		call ConfirmedTable.pushfront(Link);
+		if (Link.Dest != TOS_NODE_ID) {
+			//dbg(ROUTING_CHANNEL, "not TOS_NODE_ID\n");
+			for (i = 0; i < call RoutingTable.size(); i++) {
+				temp = call RoutingTable.get(i);
+				if (temp.Dest == Dest) {
+					for (j = 0; j < temp.NeighborsLength; j++) {
+						if (temp.Neighbors[j] > 0) {
+							inTent = FALSE;
+							inCon = FALSE;
+							if (!call TentativeTable.isEmpty()) {
+								for (k = 0; k < call TentativeTable.size(); k++) {
+									temp2 = call TentativeTable.get(k);
+									if (temp2.Dest == temp.Neighbors[j]) {
+										inTent = TRUE;
+									}
+								}
+							}
+							if (!call ConfirmedTable.isEmpty()) {
+								for (m = 0; m < call ConfirmedTable.size(); m++) {
+									temp3 = call ConfirmedTable.get(m);
+									if (temp3.Dest == temp.Neighbors[j]) {
+										inCon = TRUE;
+									}
+								}
+							}
+							if (!inTent && !inCon) {
+								temp.Dest = temp.Neighbors[j];
+								temp.Cost = Cost+1;
+								temp.Next = Dest;
+								call TentativeTable.pushfront(temp);
+							}
 						}
-						j = plist[j];
-					} while(j != start_node);
-				}
-				else
-				{
-					nexthop = start_node;
-				}
-				if(nexthop != 0)
-				{
-					call nextTable.insert(i, nexthop);
+					}
 				}
 			}
 		}
-		if(call Confirmed.isEmpty())
-		{
-			for(i = 1; i <= 20; i++)
-			{
-				temp2.Dest = i;
-				temp2.Cost = cost[TOS_NODE_ID][i];
-				temp2.Next = call nextTable.get(i);
-				call Confirmed.pushfront(temp2);
-				//dbg(GENERAL_CHANNEL, "confirmed size: %d\n", call Confirmed.size());
+		else {
+			for (j = 0; j < call NeighborsList.size(); j++) {
+				next = call NeighborsList.get(j);
+				for (n = 0; n < call RoutingTable.size(); n++) {
+					temp = call RoutingTable.get(n);
+					if (temp.Dest == next.Node) {
+						inTent = FALSE;
+						inCon = FALSE;
+						if (!call TentativeTable.isEmpty()) {
+							for (k = 0; k < call TentativeTable.size(); k++) {
+								temp2 = call TentativeTable.get(k);
+								if (temp2.Dest == temp.Dest && temp2.Cost > temp.Cost) {
+									temp4 = call TentativeTable.removeFromList(k);
+									temp4.Cost = temp.Cost;
+									temp4.Next = temp.Next;
+									call TentativeTable.pushfront(temp4);
+									inTent = TRUE;
+								}
+								if (temp2.Dest == temp.Dest && temp2.Cost == temp.Cost) {
+									inTent = TRUE;
+								}
+							}
+						}
+						if (!call ConfirmedTable.isEmpty()) {
+							//dbg(ROUTING_CHANNEL, "debugConfirmedTableNotEmpty\n");
+							for (m = 0; m < call ConfirmedTable.size(); m++) {
+								temp3 = call ConfirmedTable.get(m);
+								if (temp3.Dest == temp.Dest) {
+									//dbg(ROUTING_CHANNEL, "ConSetTrue\n");
+									inCon = TRUE;
+								}
+							}
+						}
+						if (!inTent && !inCon) {
+							//dbg(ROUTING_CHANNEL, "noTent and noCon\n");
+							call TentativeTable.pushfront(temp);
+						}
+					}
+				}
 			}
 		}
-
-	}
-
+		inCon = FALSE;
+		p = call TentativeTable.size();
+		//dbg(ROUTING_CHANNEL, "p = %d\n", p);
+		if (p == 1) {
+			temp4 = call TentativeTable.get(0);
+			call TentativeTable.popback();
+			inCon = FALSE;
+			for (m = 0; m < call ConfirmedTable.size(); m++) {
+				temp3 = call ConfirmedTable.get(m);
+				if (temp4.Dest == temp3.Dest) {
+					inCon = TRUE;
+				}
+				if (!inCon) {
+					if (temp4.Next == temp3.Dest) {
+						temp4.Next = temp3.Next;
+						for (j = 0; j < call NeighborsList.size(); j++) {
+							next = call NeighborsList.get(j);
+							if (temp4.Next == next.Node) {
+								break;
+							}
+						}
+					}
+				}
+			}
+			if (!inCon) {
+				route(temp4.Dest, temp4.Cost, temp4.Next);
+			}
+		}
+		if (p > 1) {
+			//inCon = FALSE;
+			temp4 = call TentativeTable.get(0);
+			q = 0;
+			for (k = 1; k < call TentativeTable.size(); k++) {
+				temp2 = call TentativeTable.get(k);
+				if (temp4.Cost > temp2.Cost) {
+					q = k;
+					temp4 = temp2;
+				}
+				else if (temp4.Cost == temp2.Cost && temp4.Dest > temp2.Dest) {
+					q = k;
+					temp4 = temp2;
+				}
+			}
+			temp2 = call TentativeTable.get(q);
+			for (m = 0; m < call ConfirmedTable.size(); m++) {
+				temp3 = call ConfirmedTable.get(q);
+				if (temp2.Dest == temp3.Dest) {
+					inCon = TRUE;
+				}
+				if (!inCon) {
+					if (temp4.Next == temp3.Dest) {
+						temp4.Next = temp3.Next;
+						for (j = 0; j < call NeighborsList.size(); j++) {
+							next = call NeighborsList.get(j);
+							if (temp4.Next == next.Node) {
+								break;
+							}
+						}
+					}
+				}
+			}
+			if (!inCon) {
+				if (call TentativeTable.size() - 1 > 1 && q == call TentativeTable.size() -1) {
+					call TentativeTable.popback();
+				}
+				else {
+					call TentativeTable.removeFromList(q);
+					call TentativeTable.popback();
+				}
+				route(temp4.Dest, temp4.Cost, temp4.Next);
+			}
+		}
+	} */
 }
