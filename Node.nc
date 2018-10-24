@@ -81,6 +81,7 @@ implementation{
     void splitHorizon(uint8_t nextHop);
     void sendRT();
 
+
     //Period timer function
     event void Timer.fired() {
        uint32_t Tinitial, Tinterval;     //Create inital time = 0 and the time over any interval
