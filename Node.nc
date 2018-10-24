@@ -385,6 +385,7 @@ implementation {
                 for (i = 0; i < NeighborListSize; i++) {
                         if(NeighborList[i] == 1) {
                                 NeighborList[i] -= 1;
+                                routing[i][1] = 255;
                                 dbg (NEIGHBOR_CHANNEL, "\t Node %d Dropped from the Network \n", i);
 
                                 // NeighborPing to neighbor we are dropppping
@@ -491,16 +492,14 @@ implementation {
              bool alteredRoute = FALSE;
              /* dbg(GENERAL_CHANNEL, "\t~~~~~~~My, Mote %d's, Neighbors~~~~~~~MR\n", TOS_NODE_ID);
              signal CommandHandler.printNeighbors(); */
-             dbg(GENERAL_CHANNEL, "\t~~~~~~~Mote %d's Incoming Routing Table~~~~~~~\n", src);
+             /* dbg(GENERAL_CHANNEL, "\t~~~~~~~Mote %d's Incoming Routing Table~~~~~~~\n", src);
              dbg(GENERAL_CHANNEL, "\tDest\tCost\tNext Hop:\n");
-
-
              // Here we read the first 7 indexes of the Incoming table
              for (i = 0; i < 7; i++) {
                      // There is no node with an TOS_NODE_ID so we exclude it from the print
                   if(*(newRoute+(i * 3)) != 0)
                          dbg(GENERAL_CHANNEL, "\t  %d \t  %d \t    %d \n", *(newRoute+(i * 3)), *(newRoute+(i * 3) + 1), *(newRoute+(i * 3) + 2));
-             }
+             } */
 
              // Using double forLoop instead of one, outer Iterated through routing, inner going through newRoute
             for (i = 0; i < 20; i++) {

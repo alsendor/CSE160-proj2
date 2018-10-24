@@ -12,10 +12,10 @@
 enum{
 	PACKET_HEADER_LENGTH = 8,
 	PACKET_MAX_PAYLOAD_SIZE = 28 - PACKET_HEADER_LENGTH,
-	MAX_TTL = 15
+	MAX_TTL = 19
 };
 
-
+//  This is our "Packet Object"
 typedef nx_struct pack{
 	nx_uint16_t dest;
 	nx_uint16_t src;
