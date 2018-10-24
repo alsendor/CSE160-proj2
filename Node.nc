@@ -103,8 +103,8 @@ implementation{
        if (initialized == FALSE) {
          initializeRT();
          initialized = TRUE;
-         signal CommandHandler.printNeighbors();
-         signal CommandHandler.printRouteTable();
+      //   signal CommandHandler.printNeighbors();
+      //   signal CommandHandler.printRouteTable();
        }
        else {
          sendRT();
@@ -186,7 +186,7 @@ implementation{
         else if (recievedMsg->dest == TOS_NODE_ID && recievedMsg->protocol == PROTOCOL_DV) {
           dbg(GENERAL_CHANNEL, "Calling Merge Route\n");
           diffRoute = mergeRoute((uint8_t*) recievedMsg->payload, (uint8_t) recievedMsg->src);
-          signal CommandHandler.printRouteTable();
+        //  signal CommandHandler.printRouteTable();
           if(diffRoute){
             sendRT();
           }
@@ -456,7 +456,7 @@ implementation{
             dbg (GENERAL_CHANNEL, "makePack: Package: src: %d, dest: %d, TTL: %d, seq: %d \n", Package->src, Package->dest, Package->TTL, Package->protocol, Package->seq);
             memcpy(Package->payload, payload, length);
     }
-
+    //Seen packs
     void packLog(pack *payload) {
       pack loggedP;
       uint16_t src = payload->src;
@@ -661,7 +661,7 @@ implementation{
                             diffRoute = TRUE;
                     }
             }
-            signal CommandHandler.printRouteTable();
+          //  signal CommandHandler.printRouteTable();
         }
     }
 
@@ -698,7 +698,7 @@ implementation{
         poisonTable += 3;
      }
 
-     signal CommandHandler.printRouteTable();
+    // signal CommandHandler.printRouteTable();
 
   }
 
