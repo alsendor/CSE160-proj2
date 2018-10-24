@@ -564,7 +564,8 @@ implementation{
              sequenceCounter++;
              makePack(&sendPackage, TOS_NODE_ID, AM_BROADCAST_ADDR, 1, PROTOCOL_PING, sequenceCounter, "Searching for Neighbors", PACKET_MAX_PAYLOAD_SIZE);
              call Sender.send(sendPackage, AM_BROADCAST_ADDR);
-      } else  {
+      }
+      else  {
              lessNeighborTTL();
       }
     }
