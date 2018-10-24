@@ -103,7 +103,7 @@ implementation{
 
     //Table timer function
      event void tableTimer.fired() {
-       dbg(GENERAL_CHANNEL, "TABLE Timer fired!");
+       //dbg(GENERAL_CHANNEL, "TABLE Timer fired!");
        if (initialized == FALSE) {
          initializeRT();
          initialized = TRUE;
