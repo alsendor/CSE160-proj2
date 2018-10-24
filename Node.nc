@@ -104,8 +104,8 @@ implementation{
        if (initialized == FALSE) {
          initializeRT();
          initialized = TRUE;
-         signal CommandHandler.printNeighbors();
-         signal CommandHandler.printRouteTable();
+    //     signal CommandHandler.printNeighbors();
+      //   signal CommandHandler.printRouteTable();
        }
        else {
          sendRT();
@@ -136,9 +136,9 @@ implementation{
 
         //Handles recieved packs
     event message_t* Receive.receive(message_t* msg, void* payload, uint8_t len){
-      pack* recievedMsg;
-                bool alteredRoute = FALSE;
-                recievedMsg = (pack *)payload;
+          bool diffRoute = FALSE;
+          pack* recievedMsg;
+          recievedMsg = (pack *)payload;
 
                 if (len == sizeof(pack)) {
                         //  Dead Packet: Timed out
@@ -189,9 +189,9 @@ implementation{
                         // Receiving DV Table
                         else if(recievedMsg->dest == TOS_NODE_ID && recievedMsg->protocol == PROTOCOL_DV) {
                              /* dbg(GENERAL_CHANNEL, "CALLING MERGERROUTE!!\n"); */
-                             alteredRoute = mergeRoute((uint8_t*)recievedMsg->payload, (uint8_t)recievedMsg->src);
+                             diffRoute = mergeRoute((uint8_t*)recievedMsg->payload, (uint8_t)recievedMsg->src);
                              //signal CommandHandler.printRouteTable();
-                             if(alteredRoute){
+                             if(diffRoute){
                                   sendRT();
                              }
                              return msg;
@@ -477,8 +477,9 @@ implementation{
     }
 
     bool packSeen(pack *packet) {
-      pack store;
       int x, size;
+      pack store;
+
       size = call PackList.size();
 
       if(size > 0) {
@@ -519,7 +520,7 @@ implementation{
       if(Neighbor == 0)
           dbg(GENERAL_CHANNEL, "This is the neighbor at Source 0");
        Neighbors[Neighbor] = maxNeighborTTL;
-       signal CommandHandler.printNeighbors();
+    //   signal CommandHandler.printNeighbors();
     }
 
     void lessNeighborTTL() {
