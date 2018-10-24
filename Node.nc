@@ -681,7 +681,7 @@ implementation{
 
     //Using memcpy to copy routing table information
     memcpy(poisonTable, &Routing, sizeof(Routing));
-    CommandHandler.printRouteTable();
+    signal CommandHandler.printRouteTable();
     start = poisonTable;
 
     //Poison Control Implementation: make the path cost the max hop at the moment
