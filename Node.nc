@@ -200,6 +200,8 @@ implementation{
           sendToNeighbor(&sendPackage);
           return msg;
         }
+        else
+          dbg(GENERAL_CHANNEL, "THIS IS THE PROBLEM");
         dbg(GENERAL_CHANNEL, "\tUnknown Packet Type %d\n", len);
         return msg;
     }
